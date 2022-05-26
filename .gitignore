@@ -1,0 +1,27 @@
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# R Environment Variables
+.Renviron
+
+
+# translation temp files
+po/*~
+
+.Rproj.user
+.Rhistory
+.RData
+src/*.o
+src/*.a
+*.so
+*.dll
+src/Makevars
+doc
+Meta
+config.log
+config.status
