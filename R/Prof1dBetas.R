@@ -253,7 +253,7 @@ if(reml==FALSE){
     index<-which.max(LogLik)
     #f1 <- splinefun(Betas, LogLik, method = "fmm")
     breaks[a] <- max(LogLik) - qchisq(cilevel,  df = 1)/2
-    plot(BetaSlice, LogLik-breaks[a],  ylim = max(LogLik-breaks[a]) + c(-3, 0.2), xlim = range(BetaSlice[max(LogLik-breaks[a]) - LogLik+breaks[a] < 3]), cex=0.2, xlab=paste('beta',a), col='blue')
+    plot(BetaSlice, LogLik-breaks[a],  ylim = max(LogLik-breaks[a]) + c(-3, 0.2), xlim = range(BetaSlice[max(LogLik-breaks[a]) - LogLik+breaks[a] < 3]), cex=0.2, xlab=paste('beta',a), ylab="profileL", col='blue')
     abline(h=0, lty = 2, col='black')
     
     # temp <- qchisq(cilevel,  df = 1)/2
