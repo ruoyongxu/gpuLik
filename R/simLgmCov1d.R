@@ -250,15 +250,15 @@
   par(mfrow = c(3, 2))
   
   ############### profile for covariance parameters #####################
-  aniso1 <-  unname(sqrt(params[,'anisoRatio']-1) * cos(2*(params[,'anisoAngleRadians'])))
-  aniso2 <-  unname(sqrt(params[,'anisoRatio']-1) * sin(2*(params[,'anisoAngleRadians'])))
+  aniso1 <-  unname(sqrt(paramsRenew[,'anisoRatio']-1) * cos(2*(paramsRenew[,'anisoAngleRadians'])))
+  aniso2 <-  unname(sqrt(paramsRenew[,'anisoRatio']-1) * sin(2*(paramsRenew[,'anisoAngleRadians'])))
   aniso <- cbind(aniso1, aniso2)
-  combinedRange <- sqrt(params[,'range']^2/params[,'anisoRatio'])
-  params <- cbind(params, combinedRange, aniso, sqrt(params[,"nugget"]) * Table["sdSpatial",1])
-  colnames(params)[ncol(params)] <- 'sdNugget'
+  combinedRange <- sqrt(paramsRenew[,'range']^2/paramsRenew[,'anisoRatio'])
+  paramsRenew <- cbind(paramsRenew, combinedRange, aniso, sqrt(paramsRenew[,"nugget"]) * Table["sdSpatial",1])
+  colnames(paramsRenew)[ncol(paramsRenew)] <- 'sdNugget'
   
   Spars = c("range","combinedRange","nugget",'sdNugget',"shape",'aniso1','aniso2','anisoRatio','anisoAngleRadians')
-  result = data.table::as.data.table(cbind(LogLikcpu, params[,Spars]))
+  result = data.table::as.data.table(cbind(LogLikcpu, paramsRenew[,Spars]))
   profileLogLik <- result[, .(profile=max(.SD)), by=Spars]
   
   profileLogLik[,'profile'] <- profileLogLik[,'profile'] - breaks
@@ -300,7 +300,7 @@
     upper = max(newdata$x1)
     #f1 <- approxfun(profsumLogRange$x1, profsumLogRange$z)
     f1 <- approxfun(toUse[,1], toUse[,2])
-    MLE <- sqrt(params[index[1],'range']^2/params[index[1],'anisoRatio'])
+    MLE <- sqrt(paramsRenew[index[1],'range']^2/paramsRenew[index[1],'anisoRatio'])
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v = c(MLE,exp(0.5*ci)), lty = 2, col='red')
     if(length(ci)==1){
@@ -313,7 +313,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["combinedRange",] <- c(MLE,exp(0.5*ci))
@@ -350,7 +350,7 @@
     upper = max(newdata$x1)
     #f1 <- approxfun(profrange$x1, profrange$z)
     f1 <- approxfun(toUse[,1], toUse[,2])
-    MLE <- params[index[1],'range']
+    MLE <- paramsRenew[index[1],'range']
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,exp(ci)), lty = 2, col='red')
@@ -365,7 +365,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["range",] <- c(MLE,exp(ci))
@@ -405,7 +405,7 @@
     
     lower = min(toUse$x1)
     upper = max(toUse$x1)
-    MLE <- params[index[1],'shape']
+    MLE <- paramsRenew[index[1],'shape']
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,exp(ci)), lty = 2, col='red')
@@ -419,7 +419,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["shape",] <- c(MLE,exp(ci))
@@ -455,7 +455,7 @@
     #f1 <- approxfun(profsdNugget$x1, profsdNugget$z)
     f1 <- approxfun(toUse[,1], toUse[,2])
     
-    MLE <- sqrt(params[index[1],"nugget"]) * Table["sdSpatial",1]
+    MLE <- sqrt(paramsRenew[index[1],"nugget"]) * Table["sdSpatial",1]
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,ci), lty = 2, col='red')
@@ -470,7 +470,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["sdNugget",] <- c(MLE, ci)
@@ -491,7 +491,7 @@
     inHull = geometry::inhulln(datC2, as.matrix(toTest))
     toUse = profileLogLik1[allPoints,][!inHull,]
     toTest = profileLogLik1[allPoints,]
-    MLE <- params[index[1],'nugget']
+    MLE <- paramsRenew[index[1],'nugget']
     if(nrow(toUse)>2){
       
       interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse), m=1, fx=TRUE), data=toUse)
@@ -534,7 +534,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["nugget",] <- c(MLE, ci)
@@ -569,7 +569,7 @@
     lower = min(profaniso1$x1)
     upper = max(profaniso1$x1)
     
-    MLE <- sqrt(params[index[1],'anisoRatio']-1) * cos(2*(params[index[1],'anisoAngleRadians']))
+    MLE <- sqrt(paramsRenew[index[1],'anisoRatio']-1) * cos(2*(paramsRenew[index[1],'anisoAngleRadians']))
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,ci), lty = 2, col='red')
@@ -583,7 +583,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["aniso1",] <- c(MLE, ci)
@@ -620,7 +620,7 @@
     lower = min(profileLogLik1$x1)
     upper = max(profileLogLik1$x1)
     
-    MLE <- sqrt(params[index[1],'anisoRatio']-1) * sin(2*(params[index[1],'anisoAngleRadians']))
+    MLE <- sqrt(paramsRenew[index[1],'anisoRatio']-1) * sin(2*(paramsRenew[index[1],'anisoAngleRadians']))
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,ci), lty = 2, col='black')
@@ -634,7 +634,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["aniso2",] <- c(MLE, ci)     
@@ -669,7 +669,7 @@
     lower = min(profileLogLik1$x1)
     upper = max(profileLogLik1$x1)
     
-    MLE <- params[index[1],'anisoRatio']
+    MLE <- paramsRenew[index[1],'anisoRatio']
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,ci), lty = 2, col='red')
@@ -683,7 +683,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["anisoRatio",] <- c(MLE, ci)
@@ -719,7 +719,7 @@
     lower = min(profileLogLik1$x1)
     upper = max(profileLogLik1$x1)
     
-    MLE <- params[index[1],'anisoAngleRadians']
+    MLE <- paramsRenew[index[1],'anisoAngleRadians']
     #MLE <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.00000001)$maximum
     ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
     abline(v =c(MLE,ci), lty = 2, col='red')
@@ -733,7 +733,7 @@
     }
     
     if(length(ci)==0 | length(ci)>2){
-      warning("error in params")
+      warning("error in paramsRenew")
       ci <- c(NA, NA)
     }
     Table["anisoAngleRadians",] <- c(MLE, ci)
