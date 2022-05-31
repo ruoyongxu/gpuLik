@@ -1112,8 +1112,7 @@ getHessianNolog <- function(Model,
                              logNugget = FALSE,
                              Mle = NULL,
                              boxcox = NULL,# a vector of confidence levels 1-alpha
-                             shapeRestrict = 1000,
-                             randomNugget = 0
+                             shapeRestrict = 1000#,                             randomNugget = 0
     ){
       
 
@@ -1469,7 +1468,7 @@ getHessianNolog <- function(Model,
          }
          for(j in (length(vector)*1/2+1):length(vector)){
            if(vector[j]<0){
-             vector[j] = stats::runif(1, 0, randomNugget)
+             vector[j] = -vector[j]#stats::runif(1, 0, randomNugget)
            }
          }
       out_list[[i]][,'nugget'] <- vector
@@ -1488,7 +1487,7 @@ getHessianNolog <- function(Model,
           vector <- out_list[[i]][,'shape']
           for(j in 1:length(vector)){
           if(vector[j]>shapeRestrict)
-            vector[j] = stats::runif(1, 0.1, shapeRestrict)
+            vector[j] = stats::runif(1, 0.01, shapeRestrict)
           }
           out_list[[i]][,'shape'] = vector
         }

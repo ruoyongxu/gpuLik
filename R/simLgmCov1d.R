@@ -491,6 +491,7 @@
     inHull = geometry::inhulln(datC2, as.matrix(toTest))
     toUse = profileLogLik1[allPoints,][!inHull,]
     toTest = profileLogLik1[allPoints,]
+    toUse <- toUse[order(toUse$x1),]
     MLE <- paramsRenew[index[1],'nugget']
     if(nrow(toUse)>2){
       
@@ -781,9 +782,9 @@
   ###############betahat#####################
   Betahat <- matrix(0, nrow=Ncov, ncol=Ndata)
   a<-c( ((index[1]-1)*Ncov+1) : (index[1]*Ncov) )
-  mat <- XVYXVX[a,((Ndata+1):NcolTotal)]
+  mat <- XVYXVX2[a,((Ndata+1):NcolTotal)]
   mat[upper.tri(mat)] <- mat[lower.tri(mat)]
-  Betahat <- solve(mat) %*% XVYXVX[a,index[2]]
+  Betahat <- solve(mat) %*% XVYXVX2[a,index[2]]
   Table[colnames(covariates), 1] <- Betahat
   
   if(all(c('sdNugget','shape', 'aniso1') %in% paramToEstimate)){

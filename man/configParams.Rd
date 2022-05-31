@@ -10,8 +10,7 @@ configParams(
   logNugget = FALSE,
   Mle = NULL,
   boxcox = NULL,
-  shapeRestrict = 1000,
-  randomNugget = 0
+  shapeRestrict = 1000
 )
 }
 \description{
