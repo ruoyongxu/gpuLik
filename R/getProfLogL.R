@@ -324,7 +324,6 @@ prof1dCov <- function(LogLik,  # cpu matrix
   ######################range ########
   if('combinedRange' %in% paramToEstimate){
     plot(profileLogLik$combinedRange, profileLogLik$profile, log='x',cex=.4, xlab="combinedRange",pch=16, ylab="profileLogL")
-    
     profileLogLik$sumLogRange <- 2*log(profileLogLik$combinedRange)
     newdata <- profileLogLik[,c('sumLogRange','profile')]
     colnames(newdata)[1]<-"x1"     
@@ -375,7 +374,6 @@ prof1dCov <- function(LogLik,  # cpu matrix
   
   if('range' %in% paramToEstimate){
     plot(profileLogLik$range, profileLogLik$profile, log='x', cex=.2, xlab="range", ylab="profileLogL")
-    
     profileLogLik$logrange <- log(profileLogLik$range)
     newdata <- profileLogLik[,c('logrange','profile')]
     colnames(newdata)[1]<-"x1"
