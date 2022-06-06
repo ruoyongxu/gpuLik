@@ -259,7 +259,7 @@
   
   Spars = c("range","combinedRange","nugget",'sdNugget',"shape",'aniso1','aniso2','anisoRatio','anisoAngleRadians')
   result = data.table::as.data.table(cbind(LogLikcpu, paramsRenew[,Spars]))
-  profileLogLik <- result[, .(profile=max(.SD)), by=Spars]
+  profileLogLik <- result[, .(profile=max(.SD)), by=.("combinedRange","nugget")]
   
   profileLogLik[,'profile'] <- profileLogLik[,'profile'] - breaks
   profileLogLik <- profileLogLik[profile > maximum- breaks-10]  #maximum- breaks 
@@ -271,9 +271,9 @@
   
   ######################range ########
   if('combinedRange' %in% paramToEstimate){
-    plot(profileLogLik$combinedRange, profileLogLik$profile, log='x',cex=.4, xlab="combinedRange",pch=16, ylab="profileLogL")
+    plot(paramsRenew$combinedRange, profileLogLik$profile, log='x',cex=.4, xlab="combinedRange",pch=16, ylab="profileLogL")
     
-    profileLogLik$sumLogRange <- 2*log(profileLogLik$combinedRange)
+    profileLogLik$sumLogRange <- 2*log(paramsRenew$combinedRange)
     newdata <- profileLogLik[,c('sumLogRange','profile')]
     colnames(newdata)[1]<-"x1"     
     
@@ -322,9 +322,9 @@
   
   
   if('range' %in% paramToEstimate){
-    plot(profileLogLik$range, profileLogLik$profile, log='x', cex=.2, xlab="range", ylab="profileLogL")
+    plot(paramsRenew$range, profileLogLik$profile, log='x', cex=.2, xlab="range", ylab="profileLogL")
     
-    profileLogLik$logrange <- log(profileLogLik$range)
+    profileLogLik$logrange <- log(paramsRenew$range)
     newdata <- profileLogLik[,c('logrange','profile')]
     colnames(newdata)[1]<-"x1"
     
@@ -374,8 +374,8 @@
   
   ################shape ##############   
   if('shape' %in% paramToEstimate){
-    plot(profileLogLik$shape, profileLogLik$profile, cex=.2, xlab="shape", ylab="profileLogL",  log='x')
-    profileLogLik$logshape <- log(profileLogLik$shape)
+    plot(paramsRenew$shape, profileLogLik$profile, cex=.2, xlab="shape", ylab="profileLogL",  log='x')
+    profileLogLik$logshape <- log(paramsRenew$shape)
     newdata <- profileLogLik[,c('logshape','profile')]
     colnames(newdata)[1]<-"x1"
     
@@ -429,9 +429,9 @@
   
   ################sd nugget ##############     
   if('sdNugget' %in% paramToEstimate){
-    plot(profileLogLik$sdNugget, profileLogLik$profile, cex=.2, xlab="sdNugget", ylab="profileLogL")
+    plot(paramsRenew$sdNugget, profileLogLik$profile, cex=.2, xlab="sdNugget", ylab="profileLogL")
     
-    profileLogLik1 <- profileLogLik[,c('sdNugget','profile')]
+    profileLogLik1 <- cbind(paramsRenew$sdNugget, profileLogLik$profile)
     colnames(profileLogLik1) <- c("x1", 'profile')
     
     datC2 = geometry::convhulln(profileLogLik1)
@@ -480,8 +480,8 @@
   
   
   if('nugget' %in% paramToEstimate){
-    plot(profileLogLik$nugget, profileLogLik$profile, cex=.2, xlab="nugget", ylab="profileLogL")
-    profileLogLik1 <- profileLogLik[,c('nugget','profile')]
+    plot(paramsRenew$nugget, profileLogLik$profile, cex=.2, xlab="nugget", ylab="profileLogL")
+    profileLogLik1 <- cbind(paramsRenew$nugget, profileLogLik$profile)
     colnames(profileLogLik1) <- c("x1", 'profile')
     
     datC2 = geometry::convhulln(profileLogLik1)
@@ -544,8 +544,8 @@
   
   
   if('aniso1' %in% paramToEstimate){
-    plot(profileLogLik$aniso1, profileLogLik$profile, cex=.2, xlab="aniso1", ylab="profileLogL")
-    profileLogLik1 <- profileLogLik[,c('aniso1','profile')]
+    plot(paramsRenew$aniso1, profileLogLik$profile, cex=.2, xlab="aniso1", ylab="profileLogL")
+    profileLogLik1 <- cbind(paramsRenew$aniso1, profileLogLik$profile)
     colnames(profileLogLik1) <- c("x1", 'profile')
     
     datC2 = geometry::convhulln(profileLogLik1)
@@ -594,9 +594,9 @@
   
   
   if('aniso2' %in% paramToEstimate){
-    plot(profileLogLik$aniso2, profileLogLik$profile, cex=.2, xlab="aniso2", ylab="profileLogL")
+    plot(paramsRenew$aniso2, profileLogLik$profile, cex=.2, xlab="aniso2", ylab="profileLogL")
     
-    profileLogLik1 <- profileLogLik[,c('aniso2','profile')]
+    profileLogLik1 <- cbind(paramsRenew$aniso2, profileLogLik$profile)
     colnames(profileLogLik1) <- c("x1", 'profile')
     datC2 = geometry::convhulln(profileLogLik1)
     allPoints = unique(as.vector(datC2))
@@ -643,8 +643,8 @@
   
   
   if(('anisoRatio' %in% paramToEstimate)){    # &  ('anisoAngleRadians' %in% paramToEstimate)
-    plot(profileLogLik$anisoRatio, profileLogLik$profile, cex=.2, xlab="anisoRatio", ylab="profileLogL")
-    profileLogLik1 <- profileLogLik[,c('anisoRatio','profile')]
+    plot(paramsRenew$anisoRatio, profileLogLik$profile, cex=.2, xlab="anisoRatio", ylab="profileLogL")
+    profileLogLik1 <- cbind(paramsRenew$anisoRatio, profileLogLik$profile)
     colnames(profileLogLik1) <- c("x1", 'profile')
     
     datC2 = geometry::convhulln(profileLogLik1)
@@ -692,9 +692,9 @@
   
   
   if('anisoAngleRadians' %in% paramToEstimate){
-    plot(profileLogLik$anisoAngleRadians, profileLogLik$profile, cex=.2, xlab="anisoAngleRadians", ylab="profileLogL")
+    plot(paramsRenew$anisoAngleRadians, profileLogLik$profile, cex=.2, xlab="anisoAngleRadians", ylab="profileLogL")
     
-    profileLogLik1 <- profileLogLik[,c('anisoAngleRadians','profile')]
+    profileLogLik1 <- cbind(paramsRenew$anisoAngleRadians, profileLogLik$profile)
     colnames(profileLogLik1) <- c("x1", 'profile')
     
     datC2 = geometry::convhulln(profileLogLik1)
