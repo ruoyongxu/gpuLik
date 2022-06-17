@@ -977,9 +977,9 @@ void likfitGpuP(viennacl::matrix_base<T> &yx,
     }  
     
     // backsolve QinvSsqYx = Q^(-1) ssqYX[(Ndatasets+1):nrow(ssqYX),1:Ndatasets]  , Ncovariates by Ndatasets
-    viennacl::ocl::enqueue(
-      backsolveSsqYxKernel(QinvSsqYx, ssqYX, ssqYX, localMemory, NthisIteration),
-      theQueue);
+    viennacl::ocl::enqueue(backsolveSsqYxKernel(QinvSsqYx, ssqYX, ssqYX, localMemory, NthisIteration),
+                           theQueue);
+    
     if(Diter ==1 & verbose[1]>=2){
       Rcpp::Rcout << "backsolve QinvSsqYx for temp3 finished\n" << "\n\n";
     }  
