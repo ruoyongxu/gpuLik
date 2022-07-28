@@ -1487,7 +1487,7 @@ getHessianNolog <- function(Model,
           vector <- out_list[[i]][,'shape']
           for(j in 1:length(vector)){
           if(vector[j]>shapeRestrict)
-            vector[j] = stats::runif(1, 0.01, shapeRestrict)
+            vector[j] = stats::runif(1, 0.1, shapeRestrict)
           }
           out_list[[i]][,'shape'] = vector
         }

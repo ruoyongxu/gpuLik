@@ -140,6 +140,25 @@ getProfLogL <- function(data,
   LogLikcpu <- as.matrix(-0.5*minusTwoLogLik)
   colnames(LogLikcpu) <- paste(c('boxcox'), round(boxcox, digits = 3) ,sep = '')
   selected_rows <- which(is.na(as.vector(detVar)))
+  
+  # which(is.na(as.vector(detVar)))
+  # which(is.na(as.vector(detReml)))
+  # which(is.na(as.matrix(ssqY)),arr.ind = TRUE)
+  # which(is.na(as.matrix(ssqBetahat)),arr.ind = TRUE)
+  # which(is.na(as.matrix(ssqResidual)),arr.ind = TRUE)  
+  # which(is.na(as.matrix(LogLikcpu)),arr.ind = TRUE)  
+  # 
+  # 
+  # any(is.na(as.vector(detVar2)))
+  # any(is.na(as.vector(detReml2)))
+  # which(is.na(as.matrix(ssqY2)),arr.ind = TRUE)
+  # which(is.na(as.matrix(ssqBetahat2)),arr.ind = TRUE)
+  # which(is.na(as.matrix(ssqResidual2)),arr.ind = TRUE)  
+  # which(is.na(as.matrix(LogLikcpu[-selected_rows,])),arr.ind = TRUE)  
+  # as.matrix(ssqResidual)[244,]
+  
+  
+  
   if(length(selected_rows)==0){
     paramsRenew <- params
     detVar2 <- as.vector(detVar)
@@ -151,7 +170,7 @@ getProfLogL <- function(data,
   }else{
     Nparam = Nparam - length(selected_rows)
     paramsRenew <- params[-selected_rows,]
-    LogLikcpu <- as.matrix(LogLikcpu[-selected_rows,]) 
+    LogLikcpu2 <- LogLikcpu[-selected_rows,] 
     detVar2 <- as.vector(detVar)[-selected_rows]
     detReml2 <- as.vector(detReml)[-selected_rows]
     ssqY2 <- as.matrix(ssqY)[-selected_rows,]
@@ -174,7 +193,7 @@ getProfLogL <- function(data,
   }
   
   if(HasOne==FALSE){
-    LogLikcpu <- as.matrix(LogLikcpu[,-1])
+    LogLikcpu2 <- LogLikcpu2[,-1]
     ssqY2 <- ssqY2[,-1]
     ssqBetahat2 <- ssqBetahat2[,-1]
     ssqResidual2 <- ssqResidual2[,-1]
@@ -187,7 +206,7 @@ getProfLogL <- function(data,
   
   
   if(gpuElementsOnly==FALSE){
-    Output <- list(LogLik=LogLikcpu,
+    Output <- list(LogLik=LogLikcpu2,
                    paramsRenew = paramsRenew,
                    Infindex = selected_rows,
                    Nobs = Nobs,
@@ -436,8 +455,8 @@ prof1dCov <- function(LogLik,  # cpu matrix
     inHull = geometry::inhulln(datC2, as.matrix(toTest))
     toUse = newdata[allPoints,][!inHull,]
     toTest = newdata[allPoints,]
-    #toUse <- toUse[order(toUse$x1),]
-    #toUse <- head(toUse, - 1)
+    toUse <- toUse[order(toUse$x1),]
+    toUse <- head(toUse, - 1)
     
     points(exp(toTest[,1]),toTest[,2], col='red', cex=0.6)
     points(exp(toUse[,1]), toUse[,2], col='blue', cex=0.6, pch=3)
