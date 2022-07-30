@@ -38,7 +38,7 @@
  * 
  */
 
-#include "gpuRandom.hpp"
+#include "lgmlikFit.hpp"
 #include <algorithm>        // std::min
 using namespace Rcpp;
 

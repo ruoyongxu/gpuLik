@@ -13,7 +13,7 @@
 #' @param Bstartend a vector that selects the range of B
 #' @param verbose if TRUE, print out more information
 #' @note result matrices are stored in C respectively, no returned objects
-#' @useDynLib gpuBatchMatrix
+#' @useDynLib gpuLik
 #' @export
 
 

@@ -16,6 +16,10 @@ crossprodBatchBackend <- function(C, A, D, invertD, Cstartend, Astartend, Dstart
     .Call('_gpuLik_crossprodBatchBackend', PACKAGE = 'gpuLik', C, A, D, invertD, Cstartend, Astartend, Dstartend, Nglobal, Nlocal, NlocalCache, verbose)
 }
 
+gemmBatch2backend <- function(A, B, C, transposeABC, submatrixA, submatrixB, submatrixC, batches, workgroupSize, NlocalCache, verbose) {
+    .Call('_gpuLik_gemmBatch2backend', PACKAGE = 'gpuLik', A, B, C, transposeABC, submatrixA, submatrixB, submatrixC, batches, workgroupSize, NlocalCache, verbose)
+}
+
 likfitGpu_BackendP <- function(yx, coords, params, boxcox, ssqY, XVYXVX, ssqBetahat, detVar, detReml, jacobian, NparamPerIter, workgroupSize, localSize, NlocalCache, verbose, ssqYX, ssqYXcopy, LinvYX, QinvSsqYx, cholXVXdiag, varMat, cholDiagMat) {
     invisible(.Call('_gpuLik_likfitGpu_BackendP', PACKAGE = 'gpuLik', yx, coords, params, boxcox, ssqY, XVYXVX, ssqBetahat, detVar, detReml, jacobian, NparamPerIter, workgroupSize, localSize, NlocalCache, verbose, ssqYX, ssqYXcopy, LinvYX, QinvSsqYx, cholXVXdiag, varMat, cholDiagMat))
 }

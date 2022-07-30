@@ -8,7 +8,7 @@
 #' @param startrow starting row of parameter matrix
 #' @param numberofrows number of rows for computation
 #' @note computed results are stored in var
-#' @useDynLib gpuBatchMatrix
+#' @useDynLib gpuLik
 #' @export
 
 

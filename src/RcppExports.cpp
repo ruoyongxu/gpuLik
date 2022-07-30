@@ -70,6 +70,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// gemmBatch2backend
+SEXP gemmBatch2backend(Rcpp::S4 A, Rcpp::S4 B, Rcpp::S4 C, Rcpp::IntegerVector transposeABC, Rcpp::IntegerVector submatrixA, Rcpp::IntegerVector submatrixB, Rcpp::IntegerVector submatrixC, Rcpp::IntegerVector batches, Rcpp::IntegerVector workgroupSize, Rcpp::IntegerVector NlocalCache, const int verbose);
+RcppExport SEXP _gpuLik_gemmBatch2backend(SEXP ASEXP, SEXP BSEXP, SEXP CSEXP, SEXP transposeABCSEXP, SEXP submatrixASEXP, SEXP submatrixBSEXP, SEXP submatrixCSEXP, SEXP batchesSEXP, SEXP workgroupSizeSEXP, SEXP NlocalCacheSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type B(BSEXP);
+    Rcpp::traits::input_parameter< Rcpp::S4 >::type C(CSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type transposeABC(transposeABCSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type submatrixA(submatrixASEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type submatrixB(submatrixBSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type submatrixC(submatrixCSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type batches(batchesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type workgroupSize(workgroupSizeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type NlocalCache(NlocalCacheSEXP);
+    Rcpp::traits::input_parameter< const int >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(gemmBatch2backend(A, B, C, transposeABC, submatrixA, submatrixB, submatrixC, batches, workgroupSize, NlocalCache, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
 // likfitGpu_BackendP
 void likfitGpu_BackendP(Rcpp::S4 yx, Rcpp::S4 coords, Rcpp::S4 params, Rcpp::S4 boxcox, Rcpp::S4 ssqY, Rcpp::S4 XVYXVX, Rcpp::S4 ssqBetahat, Rcpp::S4 detVar, Rcpp::S4 detReml, Rcpp::S4 jacobian, Rcpp::IntegerVector NparamPerIter, Rcpp::IntegerVector workgroupSize, Rcpp::IntegerVector localSize, Rcpp::IntegerVector NlocalCache, Rcpp::IntegerVector verbose, Rcpp::S4 ssqYX, Rcpp::S4 ssqYXcopy, Rcpp::S4 LinvYX, Rcpp::S4 QinvSsqYx, Rcpp::S4 cholXVXdiag, Rcpp::S4 varMat, Rcpp::S4 cholDiagMat);
 RcppExport SEXP _gpuLik_likfitGpu_BackendP(SEXP yxSEXP, SEXP coordsSEXP, SEXP paramsSEXP, SEXP boxcoxSEXP, SEXP ssqYSEXP, SEXP XVYXVXSEXP, SEXP ssqBetahatSEXP, SEXP detVarSEXP, SEXP detRemlSEXP, SEXP jacobianSEXP, SEXP NparamPerIterSEXP, SEXP workgroupSizeSEXP, SEXP localSizeSEXP, SEXP NlocalCacheSEXP, SEXP verboseSEXP, SEXP ssqYXSEXP, SEXP ssqYXcopySEXP, SEXP LinvYXSEXP, SEXP QinvSsqYxSEXP, SEXP cholXVXdiagSEXP, SEXP varMatSEXP, SEXP cholDiagMatSEXP) {
@@ -213,6 +234,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gpuLik_backsolveBatchBackend", (DL_FUNC) &_gpuLik_backsolveBatchBackend, 12},
     {"_gpuLik_cholBatchBackend", (DL_FUNC) &_gpuLik_cholBatchBackend, 8},
     {"_gpuLik_crossprodBatchBackend", (DL_FUNC) &_gpuLik_crossprodBatchBackend, 11},
+    {"_gpuLik_gemmBatch2backend", (DL_FUNC) &_gpuLik_gemmBatch2backend, 11},
     {"_gpuLik_likfitGpu_BackendP", (DL_FUNC) &_gpuLik_likfitGpu_BackendP, 22},
     {"_gpuLik_mat_vec_eledivideBackend", (DL_FUNC) &_gpuLik_mat_vec_eledivideBackend, 4},
     {"_gpuLik_matrix_vector_sumBackend", (DL_FUNC) &_gpuLik_matrix_vector_sumBackend, 6},

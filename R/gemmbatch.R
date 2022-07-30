@@ -12,7 +12,7 @@
 #' @param NlocalCache a vector, c(cacheSizeA, cacheSizeB)
 #' @param verbose if TRUE, print out more information
 #' @note computed results are stored in C, no returned objects, if A and B have different row batches, then one of them must have only 1 row batch 
-#' @useDynLib gpuBatchMatrix
+#' @useDynLib gpuLik
 #' @export
 
 

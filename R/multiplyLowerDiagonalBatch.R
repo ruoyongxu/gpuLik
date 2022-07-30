@@ -10,7 +10,7 @@
 #' @param Nlocal the work group size of the index space 
 #' @param NlocalCache a number
 #' 
-#' @useDynLib gpuBatchMatrix
+#' @useDynLib gpuLik
 #' @export
 
 

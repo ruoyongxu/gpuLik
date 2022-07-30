@@ -1,4 +1,4 @@
-#include "gpuRandom.hpp"
+#include "lgmlikFit.hpp"
 
 
 //#define DEBUGKERNEL

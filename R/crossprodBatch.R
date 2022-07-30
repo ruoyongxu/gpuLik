@@ -11,7 +11,7 @@
 #' @param Astartend a vector (startrow, nRow, startcol,nCol) that indicates the selected part of each submatrix in A
 #' @param Dstartend a vector (startrow, nRow, startcol,nCol) that indicates the selected part of each submatrix in D
 #' @note computed results are stored in C, no returned objects
-#' @useDynLib gpuBatchMatrix
+#' @useDynLib gpuLik
 #' @export
 
 
