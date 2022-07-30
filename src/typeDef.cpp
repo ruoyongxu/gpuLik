@@ -4,16 +4,6 @@
 #define GSL_DBL_EPSILON 2.2204460492503131e-16
 //#define GSL_SQRT_DBL_MAX 1.3407807929942596e+154
 
-template <typename T> 
-int sizeOfReal() {
-  return(-1);}
-
-template <> int sizeOfReal<double>(){
-  return(sizeof(double));}
-
-template <> int sizeOfReal<float>(){
-  return(sizeof(float));}
-
 
 
 template <typename T> 
@@ -33,11 +23,6 @@ std::string openclTypeString<float>(){
   return(result);
 }
 
-template <>
-std::string openclTypeString<uint>(){
-  std::string result = "uint";
-  return(result);
-}
 
 template <>
 std::string openclTypeString<int>(){

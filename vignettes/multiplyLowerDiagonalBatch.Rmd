@@ -1,0 +1,83 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{multiplyLowerDiagonal}
+-->
+
+
+```{r packages, results='hide', message='hide'}
+   library(gpuR)
+   library(gpuBatchMatrix)
+```
+
+
+```{r testonebatch, eval=TRUE}
+set.seed(88)
+type = "double"
+L <- matrix(floor(stats::runif(25, min=1, max=15)), 5, 5)
+L[upper.tri(L)] = 0
+diag(L) = 1
+L  # 5 x 5
+
+
+diagmat <- matrix(0, 5, 5)
+diag(diagmat) <- c(2,1,2,3,5)
+
+
+zmat = matrix(stats::rnorm(5*2), ncol=2)
+
+outputcpu <- L %*% sqrt(diagmat) %*% zmat
+outputcpu
+#####################################################################
+output <- vclMatrix(0, nrow=5, ncol=2, type=type)
+Lg <- vclMatrix(L, type=type)
+diagg <- vclMatrix(diag(diagmat), nrow=1, ncol=5, type=type)
+zmatg <- vclMatrix(zmat, type = type)
+
+gpuBatchMatrix:::multiplyLowerDiagonalBatchBackend(
+                                           L=Lg,
+                                           D=diagg,
+                                           B=zmatg,
+                                           output=output, 
+                                           diagIsOne = TRUE,
+                                           transformD = "sqrt",
+                                           Nglobal = c(4,4,1),
+                                           Nlocal = c(2,2,1),
+                                           NlocalCache = 50)
+
+
+as.matrix(output)
+```
+
+
+
+
+
+```{r testtwobatch, eval=TRUE}
+set.seed(88)
+type = "double"
+L <- matrix(floor(stats::runif(25, min=1, max=15)), 5, 5)
+L[upper.tri(L)] = 0
+diag(L) = 1
+L  # 5 x 5
+
+diagmat <- matrix(0, 5,5)
+diag(diagmat) <- c(2,1,2,3,5)
+
+zmat = matrix(stats::rnorm(5*2), ncol=2)
+
+outputcpu <- L %*% sqrt(diagmat) %*% zmat
+outputcpu
+##################### GPU #############################################
+output <- vclMatrix(0, nrow=10, ncol=2, type=type)
+Lg <- vclMatrix(rbind(L,L), type=type)
+diagg <- vclMatrix(rbind(diag(diagmat),diag(diagmat)), nrow=2, ncol=5, type=type)
+zmatg <- vclMatrix(rbind(zmat,zmat), type = type)
+
+gpuBatchMatrix:::multiplyLowerDiagonalBatchBackend(Lg, diagg, zmatg, output, diagIsOne = 1, 
+                                           transformD = "sqrt", Nglobal = c(4,4,1),Nlocal = c(2,2,1),NlocalCache = 50)
+
+
+as.matrix(output)
+```
+
+

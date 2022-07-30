@@ -1,12 +1,10 @@
-#include "lgmlikFit.hpp"
+#include "gpuRandom.hpp"
 
 
 //#define DEBUGKERNEL
 template <typename T> 
-std::string matrix_divide_vectorString(const int Nrow, 
-                                       const int Ncol, 
-                                       const int matrix_NpadCol, 
-                                       const int Result_NpadCol) {  //internal column size
+std::string matrix_plus_vectorString(const int Nrow, const int Ncol, 
+                                     const int matrix_NpadCol, const int Result_NpadCol) {  //internal column size
   
   std::string typeString = openclTypeString<T>();  // type of the sum of log factorial
   
@@ -25,9 +23,11 @@ std::string matrix_divide_vectorString(const int Nrow,
   
   
   result += 
-    "\n\n__kernel void matrix_divide_vector(\n"
+    "\n\n__kernel void matrix_add_vector(\n"
     "  __global " + typeString + "* m,\n"  
-    "  __global " + typeString + "* v,\n"
+    "  __global " + typeString + "* rv,\n"
+    "  __global " + typeString + "* cv,\n"
+    + typeString + " value,\n"
   "  __global " + typeString + "* result"  
   "){\n\n";  
   
@@ -40,7 +40,7 @@ std::string matrix_divide_vectorString(const int Nrow,
     "  for(Drow = get_global_id(0);   Drow < Nrow;  Drow+=get_global_size(0)){\n"
     "    for(Dcol = get_global_id(1);  Dcol < Ncol;   Dcol+=get_global_size(1)){\n"
     
-    "  result[Drow*Result_NpadCol+Dcol] = m[Drow*matrix_NpadCol+Dcol]/ v[Drow];\n"
+    "  result[Drow*Result_NpadCol+Dcol] = m[Drow*matrix_NpadCol+Dcol] + rv[Drow] + cv[Dcol] + value;\n"
     
     "    } // end loop through columns\n"
     "  } // end loop through rows\n";
@@ -64,23 +64,25 @@ std::string matrix_divide_vectorString(const int Nrow,
 
 
 template<typename T> 
-void matrix_vector_eledivide(
+void matrix_vectors_sum(
     viennacl::matrix_base<T> &matrix,// viennacl::vector_base<int>  rowSum, viennacl::vector_base<int>  colSum,  
     viennacl::vector_base<T> &rowvector,
-    viennacl::matrix_base<T> &result,
+    viennacl::vector_base<T> &colvector,  
+    T  constant,
+    viennacl::matrix_base<T> &sum,
     Rcpp::IntegerVector numWorkItems,
     const int ctx_id) {
   
-  if (rowvector.size()!=matrix.size1()){
+  if ((rowvector.size()!=matrix.size1()) && (colvector.size()!=matrix.size2())){
     Rcpp::Rcout << "Error: cannot do plus operation" << "\n\n";
     // return EXIT_FAILURE;
   }
   
-  std::string KernelString = matrix_divide_vectorString<T>(
-    matrix.size1(), 
-    matrix.size2(),
+  std::string KernelString = matrix_plus_vectorString<T>(
+    sum.size1(), 
+    sum.size2(),
     matrix.internal_size2(),
-    result.internal_size2()
+    sum.internal_size2()
   );
   
   viennacl::ocl::switch_context(ctx_id);
@@ -90,16 +92,14 @@ void matrix_vector_eledivide(
   Rcpp::Rcout << KernelString << "\n\n";
 #endif  
   
-  viennacl::ocl::kernel &matrix_divide_vectorKernel = my_prog.get_kernel("matrix_divide_vector");
-  matrix_divide_vectorKernel.global_work_size(0, numWorkItems[0]);
-  matrix_divide_vectorKernel.global_work_size(1, numWorkItems[1]);
-  matrix_divide_vectorKernel.local_work_size(0, 1L);
-  matrix_divide_vectorKernel.local_work_size(1, 1L);
+  viennacl::ocl::kernel &matrix_plus_vectorsKernel = my_prog.get_kernel("matrix_add_vector");
+  matrix_plus_vectorsKernel.global_work_size(0, numWorkItems[0]);
+  matrix_plus_vectorsKernel.global_work_size(1, numWorkItems[1]);
+  matrix_plus_vectorsKernel.local_work_size(0, 1L);
+  matrix_plus_vectorsKernel.local_work_size(1, 1L);
   
   
-  
-  
-  viennacl::ocl::enqueue(matrix_divide_vectorKernel(matrix, rowvector,result) );
+  viennacl::ocl::enqueue(matrix_plus_vectorsKernel(matrix, rowvector, colvector, constant, sum) );
   
   
   // return 1L;
@@ -109,19 +109,23 @@ void matrix_vector_eledivide(
 
 
 template<typename T> 
-void mat_vec_eledivideTemplated(
+void matrix_vector_sumTemplated(
     Rcpp::S4 matrixR,
     Rcpp::S4 rowvectorR,
-    Rcpp::S4 resultR,
+    Rcpp::S4 colvectorR, 
+    SEXP  constantR,
+    Rcpp::S4 sumR,
     Rcpp::IntegerVector numWorkItems) {
   
+  T constant = Rcpp::as<T>(constantR); 
   const bool BisVCL=1;
-  const int ctx_id = INTEGER(matrixR.slot(".context_index"))[0]-1;
+  const int ctx_id = INTEGER(sumR.slot(".context_index"))[0]-1;
   std::shared_ptr<viennacl::matrix<T> > matrix = getVCLptr<T>(matrixR.slot("address"), BisVCL, ctx_id);
   std::shared_ptr<viennacl::vector_base<T> > rowvector = getVCLVecptr<T>(rowvectorR.slot("address"), BisVCL, ctx_id);
-  std::shared_ptr<viennacl::matrix<T> > result = getVCLptr<T>(resultR.slot("address"), BisVCL, ctx_id);
+  std::shared_ptr<viennacl::vector_base<T> > colvector = getVCLVecptr<T>(colvectorR.slot("address"), BisVCL, ctx_id);
+  std::shared_ptr<viennacl::matrix<T> > sum = getVCLptr<T>(sumR.slot("address"), BisVCL, ctx_id);
   
-  matrix_vector_eledivide(*matrix, *rowvector, *result, numWorkItems, ctx_id);
+  matrix_vectors_sum(*matrix, *rowvector, *colvector, constant, *sum, numWorkItems, ctx_id);
   
 }
 
@@ -130,24 +134,46 @@ void mat_vec_eledivideTemplated(
 
 
 // [[Rcpp::export]]
-void mat_vec_eledivideBackend(
+void matrix_vector_sumBackend(
     Rcpp::S4 matrixR,
     Rcpp::S4 rowvectorR,
-    Rcpp::S4 resultR,
+    Rcpp::S4 colvectorR,  
+    SEXP  constantR,
+    Rcpp::S4 sumR,
     Rcpp::IntegerVector numWorkItems) {
   
-  Rcpp::traits::input_parameter< std::string >::type classVarR(RCPP_GET_CLASS(resultR));
+  Rcpp::traits::input_parameter< std::string >::type classVarR(RCPP_GET_CLASS(sumR));
   std::string precision_type = (std::string) classVarR;
   
   
   if(precision_type == "fvclMatrix") {
-    return (mat_vec_eledivideTemplated<float>(matrixR, rowvectorR, resultR, numWorkItems));
+    return (matrix_vector_sumTemplated<float>(matrixR, rowvectorR, colvectorR, constantR, sumR,  numWorkItems));
   } else if (precision_type == "dvclMatrix") {
-    return (mat_vec_eledivideTemplated<double>(matrixR, rowvectorR, resultR, numWorkItems));
+    return (matrix_vector_sumTemplated<double>(matrixR, rowvectorR, colvectorR, constantR, sumR,  numWorkItems));
   } else if (precision_type  == "ivclMatrix") {
-    return( mat_vec_eledivideTemplated<int>(matrixR, rowvectorR, resultR, numWorkItems));
+    return( matrix_vector_sumTemplated<int>(matrixR, rowvectorR, colvectorR, constantR, sumR,  numWorkItems));
   }
   
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

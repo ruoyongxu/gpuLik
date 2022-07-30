@@ -1,0 +1,30 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{matrix_divide_vector}
+-->
+
+
+```{r test}
+library(gpuBatchMatrix)
+library(gpuR)
+type="double"
+nrow<-8
+ncol<-10
+x<-vclMatrix(1:80, nrow=nrow,ncol=ncol, type=type);      xcpu<-matrix(1:80, nrow=nrow,ncol=ncol)
+
+vr<-vclVector(1:8, type=type);        vrcpu <- as.vector(vr)
+
+
+result <- vclMatrix(0, nrow=nrow,ncol=ncol, type=type)
+
+xcpu 
+vrcpu
+
+
+xcpu/vrcpu
+
+
+gpuBatchMatrix:::mat_vec_eledivideBackend(x, vr, result,  c(4,4))
+as.matrix(result)
+
+```

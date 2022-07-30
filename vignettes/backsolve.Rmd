@@ -1,0 +1,154 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{backsolveBatch}
+-->
+
+
+
+## backsolve function test
+```{r  test_check}
+library('gpuR')
+library("gpuBatchMatrix")
+Nglobal = c(64L, 64L, 4L)
+Nlocal = c(4L, 4L, 4L)
+NlocalCache = 18
+```
+
+#test 1 same batch for B
+```{r  test1}
+library('gpuR')
+library("gpuBatchMatrix")
+A = matrix(0.01*sample(100, 25, replace=TRUE),
+           nrow=5, ncol=5, byrow = TRUE) 
+A[upper.tri(A)] <- 0
+diag(A)<-1
+nrow = 5
+D1 = matrix(0.01*sample(100, nrow^2, replace=TRUE),
+            nrow=nrow, ncol=nrow, byrow = TRUE) 
+D1[upper.tri(D1)] <- 0
+diag(D1)<-10
+
+B = matrix(1:nrow(A), ncol=1)
+C = 99*B
+
+Nparam = 90
+bigA <- do.call(rbind, replicate(Nparam, A, simplify=FALSE))
+bigC <- do.call(rbind, replicate(Nparam, C, simplify=FALSE))
+
+
+gpuA = vclMatrix(bigA, type='double')
+gpuB = vclMatrix(B, type='double')
+gpuC = vclMatrix(bigC, type='double')
+
+#C = D1^(-1) B
+realC = solve(A, B)
+
+cpuC = do.call(rbind, replicate(Nparam, realC, simplify=FALSE))
+
+junk = gpuBatchMatrix:::backsolveBatchBackend(gpuC, gpuA, gpuB,
+                                         c(0, nrow(C), 0, ncol(C)),
+                                         c(0, nrow(A), 0, ncol(A)),
+                                         c(0, nrow(B), 0, ncol(B)),
+                                         1L, diagIsOne=TRUE, 
+                                         Nglobal=c(64L, 64L, 1L), 
+                                         Nlocal= c(16L, 16L, 1L), 
+                                         NlocalCache = 2000)
+
+#cbind(as.matrix(gpuC), cpuC)
+range(as.matrix(gpuC)-cpuC)
+
+
+```
+
+
+
+#test 2
+```{r two_function_test2, eval=FALSE}
+a1 = matrix( c(3, 0,0,0, 3,0, 3, 66, 3), nrow=3, ncol=3, byrow = TRUE) 
+a2 = matrix( c(1, 0,0,6, 1,0, 18, 8, 1), nrow=3, ncol=3, byrow = TRUE) 
+
+c1 = matrix( c(26, 41, 6), nrow=3, ncol=1, byrow=F) 
+
+b1 = a1%*%c1
+c2=solve(a2,b1)
+
+A <- rbind(a1,a2)
+B <- b1
+C <- rbind(c1,c2)
+A;B;C
+gpuA <- vclMatrix(A, type="double")
+gpuB <- vclMatrix(B, type="double")
+gpuC2 <- vclMatrix(0,nrow=6, ncol=1, type="double")
+
+gpuBatchMatrix::backsolveBatch(gpuC2, gpuA, gpuB, numbatchB=1L, diagIsOne=FALSE, Nglobal=c(8L,8L,4L), Nlocal=c(4L, 4L, 4L), NlocalCache=50)
+as.matrix(gpuC2)
+```
+
+#test 3 different batches of B, selected range
+```{r test2, eval=TRUE}
+a1 = matrix( c(5, 0,0,2, 5,0, 5, 66, 5), nrow=3, ncol=3, byrow = TRUE) 
+a2 = matrix( c(1, 0,0,6, 1,0, 18, 8, 1), nrow=3, ncol=3, byrow = TRUE) 
+A1 = cbind(c(0,0,0,0), rbind(c(0,0,0), a1))  #4x4
+A2 = cbind(c(0,0,0,0), rbind(c(0,0,0), a2))
+C1 = matrix( c(11, 22, 33, 44, 55, 66), nrow=3, ncol=2, byrow=F) 
+C2 = matrix( c(6, 5, 4, 3, 2, 1), nrow=3, ncol=2,byrow=F)  
+
+B1 = a1%*%C1   # 3x2
+B2= a2%*%C2
+BN1 <- rbind(cbind(c(0,0,0),B1,c(0,0,0)), c(0,0,0,0), c(0,0,0,0))
+BN2 <- rbind(cbind(c(0,0,0),B2,c(0,0,0)), c(0,0,0,0), c(0,0,0,0))
+A <- rbind(A1,A2)
+B <- rbind(BN1,BN2)
+C <- rbind(C1,C2)
+A
+B
+
+
+
+gpuA <- vclMatrix(A, type="double")
+gpuB <- vclMatrix(B, type="double")
+gpuC <- vclMatrix(0,nrow=6, ncol=3, type="double")  #gpuC2 <- vclMatrix(0,nrow=6, ncol=2, type="double")
+gpuBatchMatrix:::backsolveBatchBackend(gpuC, gpuA, gpuB, 
+                                  c(0,3,0,2),c(1,3,1,3),c(0,3,1,2),2L,
+                                  diagIsOne=FALSE, Nglobal=c(64L, 64L), Nlocal= c(4L, 4L), NlocalCache=1000)
+cbind(as.matrix(gpuC),C)
+```
+
+
+
+
+#test 4 full range single B batch
+```{r test4_backend, eval=TRUE}
+N = 4
+oneLwer = matrix(0, N, N)
+oneLwer[lower.tri(oneLwer, diag=FALSE)] = 1
+
+Amat = vclMatrix(rbind(diag(N), 
+                       4*diag(N), 
+                       diag(N) + 0.5*oneLwer,
+                       2*diag(N) - 0.5*oneLwer),
+                 type='double')
+Nmatrix = nrow(Amat)/ncol(Amat)
+Bmat = vclMatrix(cbind(rep(c(1,0), c(1, N-1)),
+             rep(1,N)), type='double')
+Cmat = vclMatrix(0, nrow(Amat), ncol(Bmat), type='double')
+as.matrix(Amat)
+as.matrix(Bmat)
+
+NlocalCache = 10
+Nglobal = c(5L, 5L, 5L)
+Nlocal = c(1L, 1L) 
+gpuBatchMatrix:::backsolveBatchBackend(Cmat, Amat, Bmat, 
+                                  c(0,N,0,ncol(Bmat)),
+                                  c(0,N,0,N),
+                                  c(0,N,0,ncol(Bmat)),
+                                  1L,
+                                  diagIsOne=FALSE, 
+                                  Nglobal, Nlocal, NlocalCache)
+for(D in 1:Nmatrix) {
+print(cbind(
+  as.matrix(Amat)[(D-1)*N + 1:N, ], NA,
+  as.matrix(Cmat)[(D-1)*N + 1:N,], NA,
+  solve(as.matrix(Amat)[(D-1)*N + 1:N, ]) %*% as.matrix(Bmat)))
+}
+```

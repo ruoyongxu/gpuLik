@@ -1,0 +1,364 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Matern correlations}
+-->
+
+
+# Matern correlations
+```{r date}
+date()
+```
+
+
+
+```{r packages, results='hide', message='hide'}
+   library(gpuR)
+   library(gpuBatchMatrix)
+   library(clrng)
+```
+
+
+```{r memoryAvailable, echo=TRUE}
+gpuR::listContexts()[,'platform']
+which2.1 = grep('OpenCL 2.[[:digit:]]',gpuR::listContexts()[,'platform'])
+if(length(which2.1)) {
+  gpuR::setContext(which2.1[1])
+}
+gpuR::gpuInfo()$deviceName
+gpuR::gpuInfo()$maxAllocatableMem/(1024^3)
+```
+
+Set up spatial data
+```{r setupData}
+   Nsim = 4
+   Ngrid = c(2,4)*2
+   NlocalCache = 300
+    NglobalMatern = c(64,8) 
+    NlocalMatern = c(8, 4)
+   NglobalChol =  c(16,8,4)
+    NglobalChol =  c(64,8)
+    NlocalChol = c(16, 8)
+    NglobalRandom = c(64,4)
+  NglobalMult = c(16,4,4)   
+  NlocalMult = c(4,4,1)   
+theType = "double"
+
+
+NlocalMatern = c(2,2)
+
+
+if(gpuR::gpuInfo()$deviceMemory > 10^9){
+   Ngrid = c(40,40)
+   Nsim = 6
+   NlocalCache = 4000
+   NglobalMatern = c(256,8) 
+   NlocalMatern = c(32, 8)
+   NglobalChol =  c(128,8)
+   NlocalChol = c(16, 8)
+   NglobalRandom = c(512,8)
+   NglobalMult = c(64,8,8)   
+   NlocalMult = c(8,8,1)
+   theType = "double"
+}
+
+myRaster = raster::raster( raster::extent(0,Ngrid[1]/Ngrid[2],5,6),Ngrid[1], Ngrid[2])
+coordsSp = sp::SpatialPoints(raster::xyFromCell(myRaster, 1:raster::ncell(myRaster)))
+#head(coordsSp@coords,15)
+#dist(coordsSp@coords)
+```
+
+
+
+# Batch matern
+```{r paramsBatch}
+myParamsBatch = rbind(
+c(shape=1, range=1, variance = 1, nugget = 10, anisoRatio = 2, anisoAngleRadians = pi/6), #1
+ c(shape=1.25, range=0.5, variance = 1.5, nugget = 0.001, anisoRatio = 1, anisoAngleRadians = 0),  #2
+ c(shape=1.25, range=0.5, variance = 1.5, nugget = 0, anisoRatio = 1, anisoAngleRadians = 0),  #2
+ c(shape=3, range=3, variance = 1, nugget = 40, anisoRatio = 1, anisoAngleRadians = 0),#4
+ c(shape=3.5, range=2, variance = 1, nugget = 0, anisoRatio = 1, anisoAngleRadians = 0), #5
+ c(shape=4, range=3, variance = 1, nugget = 1, anisoRatio = 1, anisoAngleRadians = 0),#6
+ c(shape=4.5, range=2, variance = 1, nugget = 40, anisoRatio = 1, anisoAngleRadians = 0),#7
+ c(shape=5, range=2, variance = 1, nugget = 1, anisoRatio = 1, anisoAngleRadians = 0), #8
+ c(shape=1.5, range=3, variance = 1, nugget = 0, anisoRatio = 1, anisoAngleRadians = 0), #9
+ c(shape=1, range=2, variance = 1, nugget = 0, anisoRatio = 1, anisoAngleRadians = 0), #10
+ c(shape=1.25, range=2, variance = 1, nugget = 0, anisoRatio = 1, anisoAngleRadians = 0),#11
+ c(shape=1.5, range=5, variance = 1, nugget = 40, anisoRatio = 1, anisoAngleRadians = 0),#12
+ c(shape=1.5, range=2, variance = 2.5, nugget = 0, anisoRatio = 1, anisoAngleRadians = 0), #13
+ c(shape=1.5, range=5, variance = 2.5, nugget = 20, anisoRatio = 1, anisoAngleRadians = 0), #14
+ c(shape=1.5, range=5, variance = 2.5, nugget = 10, anisoRatio = 1, anisoAngleRadians = 0), #15
+ c(shape=1.5, range=5, variance = 1.5, nugget = 30, anisoRatio = 1, anisoAngleRadians = 0) #16
+)
+
+myParamsBatch[,'variance'] = 1:nrow(myParamsBatch)
+myParamsBatch[,'nugget'] = myParamsBatch[,'variance']/100
+
+myParamsBatch = t(apply(myParamsBatch, 1, geostatsp::fillParam))
+
+myParamsBatch[,1:7]
+```
+
+```{r outputBatchCreate, eval=TRUE}
+coordsGpu = vclMatrix(coordsSp@coords, nrow(coordsSp@coords), ncol(coordsSp@coords), type=theType)
+outputBatchF = vclMatrix(0, nrow(myParamsBatch)*nrow(coordsGpu), nrow(coordsGpu), type=gpuR::typeof(coordsGpu))
+
+paramsGpu = vclMatrix(cbind(
+  myParamsBatch, 
+  matrix(0, nrow(myParamsBatch), 22-ncol(myParamsBatch))), type=gpuR::typeof(coordsGpu))
+
+colnames(paramsGpu)= c(colnames(myParamsBatch)[1:7],
+ c('costheta', 'sintheta','anisoRatioSq',
+ ' varscale', 'logxscale', 'sinrat','mu', 'muSq', 'mup1', 'nuround', 'g1', 
+ 'g2', 'g1pnu', 'g1mnu', 'variancePlusNugget'))
+
+startrow = 0
+gpuBatchMatrix:::maternBatchBackend(
+    outputBatchF,
+    coordsGpu, 
+    paramsGpu,  
+    c(64,64),#NglobalMatern, 
+    c(16,8),#c(16,16),#NlocalMatern,
+    startrow = startrow,
+    numberofrows = nrow(paramsGpu)-startrow,
+    verbose = 1)
+```
+
+```{r outputBatchShowStuff, eval=FALSE}
+#dim(outputBatchF)
+#t(as.matrix(outputBatchF[1:10,1:9]))
+as.matrix(outputBatchF[(13-1)*ncol(outputBatchF) + 1:7,1:7])
+(xx = cbind(
+as.matrix(
+    outputBatchF[seq(1, by=ncol(outputBatchF), len=nrow(paramsGpu)-startrow),1]
+    ),
+myParamsBatch[(1+startrow):nrow(paramsGpu),c('variance','nugget')]))
+```
+
+```{r showfromcpu, eval=FALSE}
+for(D in unique(round(seq(1L,nrow(myParamsBatch), len=min(c(3, nrow(myParamsBatch))))))) {
+print(D)
+fromCpu = geostatsp::matern(
+    x=coordsSp,
+    param=drop(myParamsBatch[D,1:7])
+    )
+
+fromGpu = as.matrix(outputBatchF)[
+  seq(from=1+ncol(outputBatchF) * (D-1), len=ncol(outputBatchF)),]
+
+print(quantile(as.vector(fromCpu - fromGpu), na.rm=TRUE))
+}
+```
+
+
+
+
+# Cholesky
+```{r cholBach, eval = TRUE}
+diagMat = vclMatrix(0, nrow(paramsGpu), ncol(outputBatchF), 
+                    type = gpuR::typeof(outputBatchF))
+outputChol = deepcopy(outputBatchF)
+
+gpuBatchMatrix::cholBatch(
+  outputChol, diagMat, 
+  numbatchD=nrow(myParamsBatch),
+  Nglobal = c(128L, 16L),#NglobalChol,
+  Nlocal = c(16L, 16L),#NlocalChol,
+  NlocalCache = 2000)#NlocalCache)
+as.matrix(diagMat)[,1:4]
+```
+
+
+
+```{r cholBatchCpu, eval=TRUE}
+D=2
+theMaternGpu = as.matrix(outputBatchF[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
+fromGpuOrig = chol4gpu = as.matrix(outputChol[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
+chol4gpu[upper.tri(chol4gpu)] = 0
+diag(chol4gpu) = 1
+diagGpu = as.vector(pmax(0,diagMat[D,]))
+
+maternReconstruct = chol4gpu %*% diag(diagGpu) %*% t(chol4gpu)
+
+maternCpu = geostatsp::matern(
+    x=coordsSp,
+    param=drop(myParamsBatch[D,1:7]))
+Sprob = c(0,0.01, 0.1, 0.5)
+Sprob = sort(unique(c(Sprob, 1-Sprob)))
+
+quantile(maternReconstruct - maternCpu, prob=Sprob)
+    
+
+cholCpu = geostatsp::matern(
+    x=coordsSp,
+    param=drop(myParamsBatch[D,1:7]),
+    type='cholesky'
+    )
+theDiag = diag(cholCpu)
+cholCpu = cholCpu %*% diag(1/theDiag)
+theDiag = theDiag^2
+
+
+
+#quantile(cholCpu - chol4gpu, prob = Sprob)
+#quantile(theDiag - as.matrix(diagMat)[D,], prob=Sprob)
+plot(theDiag - diagGpu)
+#plot(cholCpu[600,] - chol4gpu[600,])
+#cbind(theDiag, diagGpu, theDiag - diagGpu)[seq(178,len=20),]
+```
+
+
+
+
+# Multiplying lower triangle
+create a matrix of independent normals
+```{r randomNormalsSim}
+streamsGpu <- clrng::createStreamsGpu(128*64)
+zMatGpu = clrng::rnormGpu(c(ncol(outputBatchF), Nsim), 
+                           streams=streamsGpu, Nglobal=c(128,64),
+                           type = theType)
+```
+
+
+
+
+
+compute U = L D^(1/2) Z, where LDLt is the Cholesky of the variance matrix, Z is the independent normals
+```{r multLowerGpu, eval = TRUE}
+simMat = vclMatrix(0, nrow(outputChol), ncol(zMatGpu), 
+  type = gpuR::typeof(zMatGpu))
+
+
+gpuBatchMatrix::multiplyLowerDiagonalBatch(
+  outputChol, diagMat, zMatGpu, simMat, 
+  diagIsOne = TRUE, # diagonal of L is one
+  transformD = "sqrt", # take the square root of each element of D
+  Nglobal = c(128,8,16),#c(32,32,4),#c(64,8,8), # rows, columns, matrix
+  Nlocal = c(32,8,1),#c(8,8,1),  # anything, anything 1
+  NlocalCache = 5000)
+
+
+D=1
+resGpu = simMat[seq( (D-1) * ncol(outputBatchF)+1, len=ncol(outputBatchF)),]
+chol4gpu = as.matrix(outputChol[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
+chol4gpu[upper.tri(chol4gpu)] = 0
+diag(chol4gpu) = 1
+diagGpu = as.vector(diagMat[D,])
+zCpu = as.matrix(zMatGpu)
+resCpu = chol4gpu %*% diag( sqrt(diagGpu)) %*% zCpu
+
+
+
+
+quantile(resGpu - resCpu)
+```
+
+```{r checkMultiplyLower, eval=TRUE}
+D=1
+resGpu = simMat[seq( (D-1) * ncol(outputBatchF)+1, len=ncol(outputBatchF)),]
+theMaternGpu = as.matrix(outputBatchF[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
+fromGpuOrig = chol4gpu = as.matrix(outputChol[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
+chol4gpu[upper.tri(chol4gpu)] = 0
+diag(chol4gpu) = 1
+diagGpu = as.vector(diagMat[D,])
+
+zCpu = as.matrix(zMatGpu)
+resCpu = chol4gpu %*% diag(sqrt(diagGpu)) %*% zCpu
+quantile(resGpu - resCpu)
+
+range(resGpu - diag(sqrt(diagGpu)) %*% zCpu )
+```
+
+
+# Plot simulated materns
+```{r plotSimNames}
+theNames = apply(expand.grid('par',1:nrow(paramsGpu), 'sim', 1:Nsim), 1, paste, collapse='')
+```
+
+```{r plotSimSetup, eval = F}
+library(raster)
+simRaster = brick(myRaster, 
+  nl = ncol(simMat)*nrow(paramsGpu))
+system.time(values(simRaster) <- as.vector(as.matrix(simMat)))
+names(simRaster) = theNames
+```
+
+```{r plotSim, fig.height=5, fig.width=4, out.width="paste0(98/nrow(paramsGpu), '%')", fig.cap='simulations', fig.subcap = 'theNames', eval = F}
+par(mar=rep(0.1, 4))
+for(D in names(simRaster)) {
+  plot(extent(simRaster))
+  plot(simRaster[[D]], legend=FALSE, add=TRUE)
+}
+  
+```
+
+
+
+outputChol a = cbind(Y, 1), solve for a
+
+# Backsolve
+
+```{r backsolve, echo=TRUE, eval=F}
+  
+#solveMat = -99 +0*simMat
+solveMat=vclMatrix(0, nrow(simMat),ncol(simMat),type=gpuR::typeof(outputChol))
+
+gpuBatchMatrix:::backsolveBatch(
+  solveMat, outputChol, simMat, 
+  numbatchB = nrow(paramsGpu),
+  diagIsOne = TRUE,   
+  Nglobal = NglobalChol,
+  Nlocal = NlocalChol,
+  NlocalCache = 3000)
+
+NglobalChol
+NlocalChol
+NglobalChol/NlocalChol
+
+as.matrix(simMat[1:12,])
+
+as.matrix(solveMat[1:12,])
+
+L = as.matrix(outputChol[1:ncol(outputChol), ])
+L[!lower.tri(L, diag=TRUE)] = 0
+diag(L) = 1
+L[1:4,1:4]
+
+solve(L, as.matrix(simMat[1:ncol(outputChol),]))[1:12, ]
+
+```
+
+
+
+
+```{r batchMaternSwussRaub, eval=FALSE}
+data('swissRain', package='geostatsp')
+sr2 = swissRain[1:4,]
+sr2@coords = sr2@coords
+dist(sr2@coords)
+myParamsSR = geostatsp::fillParam(c(
+  variance=2,nugget=1, anisoAngleRadians=0,
+  range=12*1000, shape=1, anisoRatio = 1))
+
+myParamsBatchSR1 = rbind(myParamsSR, myParamsSR)
+myParamsBatchSR = cbind(myParamsBatchSR1, 
+        matrix(0, nrow(myParamsBatchSR1), 22-ncol(myParamsBatchSR1)))
+
+outputSwissRain = vclMatrix(0, 
+        nrow(myParamsBatchSR)*length(sr2),length(sr2),type='double')
+gpuBatchMatrix::maternBatch(
+    var=outputSwissRain,
+    coords=vclMatrix(sr2@coords, type='double'), 
+    param=vclMatrix(myParamsBatchSR, type='double'),  
+    Nglobal = c(1,1,1), 
+    Nlocal = c(1,1,1))
+geostatsp::matern(sr2, myParamsSR)
+as.matrix(outputSwissRain)
+```
+# extra info
+
+```{r gpuInfo, echo=TRUE, eval=FALSE}
+gpuR::gpuInfo()
+```
+
+
+
