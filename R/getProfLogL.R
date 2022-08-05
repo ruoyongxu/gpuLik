@@ -16,6 +16,11 @@ getProfLogL <- function(data,
                         verbose=c(1,0)){
   
   
+  # verbose[2]>=2 then information for each kernel process in each loop
+  # verbose[1]>=3 matern chol kernel string
+  # verbose[1]>=2 loop information
+  # verbose[1]>=1 Nparams Niter  Ncovariates Ndatasets 
+  
   if(1 %in% boxcox){
     HasOne=TRUE
   }else{
@@ -161,6 +166,7 @@ getProfLogL <- function(data,
   
   if(length(selected_rows)==0){
     paramsRenew <- params
+    LogLikcpu2 <- LogLikcpu
     detVar2 <- as.vector(detVar)
     detReml2 <- as.vector(detReml)
     ssqY2 <- as.matrix(ssqY)
@@ -354,7 +360,7 @@ prof1dCov <- function(LogLik,  # cpu matrix
     inHull = geometry::inhulln(datC2, as.matrix(toTest))
     toUse = newdata[allPoints,][!inHull,]
     toTest = newdata[allPoints,]
-    
+    toUse <- head(toUse, - 1)
     
     #plot(profileLogLik$sumLogRange, profileLogLik$profile,cex=.4, xlab="sumLogRange",pch=16, ylab="profileLogL", col = colAlpha$plot)
     interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse),  m=1, fx=TRUE), data=toUse)
@@ -404,6 +410,7 @@ prof1dCov <- function(LogLik,  # cpu matrix
     inHull = geometry::inhulln(datC2, as.matrix(toTest))
     toUse = newdata[allPoints,][!inHull,]
     toTest = newdata[allPoints,]
+    toUse <- head(toUse, - 1)
     
     interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse),  m=1, fx=TRUE), data=toUse)
     profrange = data.frame(x1=seq(min(toUse$x1), max(toUse$x1), len=1001))
@@ -456,7 +463,7 @@ prof1dCov <- function(LogLik,  # cpu matrix
     toUse = newdata[allPoints,][!inHull,]
     toTest = newdata[allPoints,]
     toUse <- toUse[order(toUse$x1),]
-    toUse <- head(toUse, - 1)
+    #toUse <- head(toUse, - 1)
     
     points(exp(toTest[,1]),toTest[,2], col='red', cex=0.6)
     points(exp(toUse[,1]), toUse[,2], col='blue', cex=0.6, pch=3)
