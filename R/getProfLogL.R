@@ -1064,7 +1064,7 @@ likfitLgmGpu <- function(model,
                                          jacobian = result1$jacobian)
   
   finalTable <- result2$summary
-  finalTable[1:3,]<-rbind(Betasoutput$estimates[,c(1:3)],sigmaoutput$estimates[,c(1:3)])
+  finalTable[1:(nrow(Betasoutput$estimates)+1),]<-rbind(Betasoutput$estimates[,c(1:3)],sigmaoutput$estimates[,c(1:3)])
   
   if(is.null(params)){
     Output <- list(summary = finalTable,
