@@ -1161,7 +1161,7 @@ getHessianNolog <- function(Model,
       #     eig$values[i] <- pmin(0.01, abs(eig$values[i]))
       # }
       #eig$values <- abs(eig$values)
-
+      paramsColnames <- c("range","shape","nugget","anisoRatio","anisoAngleRadians")
       
       if(logNugget == TRUE & Mle['shape'] < 4){
 
@@ -1179,7 +1179,7 @@ getHessianNolog <- function(Model,
             naturalspace <- cbind(Mod(temp[,1])^2 + 1, Arg(temp[,1])/2)
             pointsEllipse <- cbind(exp(pointsEllipseGammaspace[,whichLogged]),naturalspace)
             colnames(pointsEllipse) <- names(Mle)
-            out_list[[i]] = pointsEllipse
+            out_list[[i]] = pointsEllipse[,paramsColnames]
           }         
         }else{
           for(i in 1:length(alpha)){
@@ -1188,7 +1188,7 @@ getHessianNolog <- function(Model,
             colnames(pointsEllipseGammaspace) <- names(MleGamma)
             pointsEllipse <- cbind(exp(pointsEllipseGammaspace[,paste("log(", names(Mle)[whichLogged], ")",sep="")]))
             colnames(pointsEllipse) <- names(Mle)
-            out_list[[i]] = pointsEllipse
+            out_list[[i]] = pointsEllipse[,paramsColnames]
           } 
         }
       }else if(length(Mle)==3){
@@ -1206,7 +1206,7 @@ getHessianNolog <- function(Model,
                              dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), exp(pointsEllipseGammaspace[,whichLogged]),naturalspace,fixed)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
           # }
         }else{
@@ -1216,7 +1216,7 @@ getHessianNolog <- function(Model,
             colnames(pointsEllipseGammaspace) <- names(MleGamma)
             pointsEllipse <- cbind(exp(pointsEllipseGammaspace[,paste("log(", names(Mle)[whichLogged], ")",sep="")]))
             colnames(pointsEllipse) <- names(Mle)
-            out_list[[i]] = pointsEllipse
+            out_list[[i]] = pointsEllipse[,paramsColnames]
           }
           }
         }else if(length(Mle)==4){
@@ -1233,7 +1233,7 @@ getHessianNolog <- function(Model,
                              dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), exp(pointsEllipseGammaspace[,whichLogged]),naturalspace,fixed)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         # }
       }else if(length(Mle)==5){
@@ -1248,7 +1248,7 @@ getHessianNolog <- function(Model,
             naturalspace <- cbind(Mod(temp[,1])^2 + 1, Arg(temp[,1])/2)
             pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), exp(pointsEllipseGammaspace[,whichLogged]),naturalspace)
             colnames(pointsEllipse) <- names(Mle)
-            out_list[[i]] = pointsEllipse
+            out_list[[i]] = pointsEllipse[,paramsColnames]
           }
         # }
       }
@@ -1271,7 +1271,7 @@ getHessianNolog <- function(Model,
               naturalspace <- cbind(Mod(temp[,1])^2 + 1, Arg(temp[,1])/2)
               pointsEllipse <- cbind((1/pointsEllipseGammaspace[, whichLogged])^2,naturalspace)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
           }else{
             for(i in 1:length(alpha)){
@@ -1280,7 +1280,7 @@ getHessianNolog <- function(Model,
               colnames(pointsEllipseGammaspace) <- names(MleGamma)
               pointsEllipse <- cbind((1/pointsEllipseGammaspace[, whichLogged])^2)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
           }
         }else if(length(Mle)==3){
@@ -1298,7 +1298,7 @@ getHessianNolog <- function(Model,
                                dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
                 pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), (1/pointsEllipseGammaspace[, whichLogged])^2,naturalspace,fixed)
                 colnames(pointsEllipse) <- names(Mle)
-                out_list[[i]] = pointsEllipse
+                out_list[[i]] = pointsEllipse[,paramsColnames]
               }
           }else{
             for(i in 1:length(alpha)){
@@ -1309,7 +1309,7 @@ getHessianNolog <- function(Model,
                              dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind((1/pointsEllipseGammaspace[, whichLogged])^2, fixed)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
           }
         }else if(length(Mle)==4){
@@ -1326,7 +1326,7 @@ getHessianNolog <- function(Model,
                              dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), (1/pointsEllipseGammaspace[, whichLogged])^2,naturalspace,fixed)
               colnames(pointsEllipse)[1:4] <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         }else if(length(Mle)==5){
           #load('/home/ruoyong/gpuLik/data/coords5d.RData')
@@ -1340,7 +1340,7 @@ getHessianNolog <- function(Model,
               naturalspace <- cbind(Mod(temp[,1])^2 + 1, Arg(temp[,1])/2)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), (1/pointsEllipseGammaspace[, whichLogged])^2,naturalspace)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         }
       }
@@ -1361,7 +1361,7 @@ getHessianNolog <- function(Model,
                              dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), exp(pointsEllipseGammaspace[,whichLogged]),pointsEllipseGammaspace[,-c(1,whichLogged,whichAniso)], naturalspace,fixed)
               colnames(pointsEllipse)[1:4] <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         }else if(length(Mle)==5){
           #load('/home/ruoyong/gpuLik/data/coords5d.RData')
@@ -1375,7 +1375,7 @@ getHessianNolog <- function(Model,
               naturalspace <- cbind(Mod(temp[,1])^2 + 1, Arg(temp[,1])/2)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), exp(pointsEllipseGammaspace[,whichLogged]), pointsEllipseGammaspace[,-c(1,whichLogged,whichAniso)], naturalspace)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         }
       }
@@ -1396,7 +1396,7 @@ getHessianNolog <- function(Model,
                              dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), (1/pointsEllipseGammaspace[, whichLogged])^2,pointsEllipseGammaspace[,-c(1,whichLogged,whichAniso)], naturalspace, fixed)
               colnames(pointsEllipse)[1:4] <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         }else if(length(Mle)==5){
           #load('/home/ruoyong/gpuLik/data/coords5d.RData')
@@ -1410,7 +1410,7 @@ getHessianNolog <- function(Model,
               naturalspace <- cbind(Mod(temp[,1])^2 + 1, Arg(temp[,1])/2)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), (1/pointsEllipseGammaspace[, whichLogged])^2, pointsEllipseGammaspace[,-c(1,whichLogged,whichAniso)], naturalspace)
               colnames(pointsEllipse) <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
         }
       }
@@ -1429,7 +1429,7 @@ getHessianNolog <- function(Model,
                                    dimnames = list(rownames(pointsEllipseGammaspace), fixedVar), byrow=TRUE)
               pointsEllipse <- cbind(sqrt(exp(pointsEllipseGammaspace[,'sumLogRange'])*naturalspace[,1]), exp(pointsEllipseGammaspace[,whichLogged]),pointsEllipseGammaspace[,'nugget'], naturalspace, fixed)
               colnames(pointsEllipse)[1:4] <- names(Mle)
-              out_list[[i]] = pointsEllipse
+              out_list[[i]] = pointsEllipse[,paramsColnames]
             }
       }      
       
@@ -1468,7 +1468,7 @@ getHessianNolog <- function(Model,
          }
          for(j in (length(vector)*1/2+1):length(vector)){
            if(vector[j]<0){
-             vector[j] = stats::runif(1, 0, 3) #-vector[j]#
+             vector[j] = stats::runif(1, 0, 2) #-vector[j]#
            }
          }
       out_list[[i]][,'nugget'] <- vector

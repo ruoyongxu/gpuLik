@@ -51,6 +51,7 @@
   #breaks <- rep(0, ncol(Betas))
   Table <- matrix(NA, nrow=ncol(Betas), ncol=4)
   colnames(Table) <-  c("MLE", paste(c('lower', 'upper'), cilevel*100, 'ci', sep = ''),"maximum")
+  rownames(Table) <- colnames(Betas)
   #index <- matrix(0, nrow=m, ncol=2)
   profBetas <- matrix(0, nrow=1001, ncol=2*ncol(Betas))
   
@@ -330,6 +331,7 @@ if(reml==FALSE){
     Table[a,] <- c(MLE, ci, max(LogLik))
     
   }
+  
   
   if(convexHull == TRUE){
     Output <- list(estimates = Table,

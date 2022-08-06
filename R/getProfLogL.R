@@ -257,29 +257,44 @@ getProfLogL <- function(data,
 
 
 
+#' @title Betas and sigma automatic configuration
+#' @useDynLib gpuLik
+#' @export
+ParamsFromLgm <- function(ModelSummary,      #lgm model
+                          covariates,        # a string vector
+                          Betaleft = 0.5,
+                          Betaright = 0.3,
+                          sdSpatialleft = 0.9,
+                          sdSpatialright = 1.05){
+  
+  
+  EstMatrix <- ModelSummary[covariates,c('estimate','ci0.005', 'ci0.995')]
+  
+  Betas <- matrix(0, nrow=200, ncol=length(covariates))
+  colnames(Betas) <- covariates
+  
+  for (j in 1 : ncol(Betas)){
+    Betas[,j]<- sort(
+      c(EstMatrix[j,1], seq(EstMatrix[j,2]-abs(EstMatrix[j,2])*Betaleft, EstMatrix[j,3]+ abs(EstMatrix[j,3])*Betaright, len=199)    )
+    )
+  }
+  
+  
+  
+  sdSpatial <- sort(
+    c( ModelSummary['sdSpatial','estimate'], seq(ModelSummary['sdSpatial','ci0.005']*sdSpatialleft,  ModelSummary['sdSpatial','ci0.995']*sdSpatialright, len=59))
+  ) 
+  
+  
+  output = list(Betas = Betas,
+                sdSpatial = sdSpatial)
+  
+  output
+  
+}
 
 
 
-# get1dCovexhullinter <- function(profileLogLik,     # a data frame or data.table # 2 column names must be x1 and profile
-#                                 a=0.1,    # minus a little thing
-#                                 m=1){
-#   
-#   datC2 = geometry::convhulln(profileLogLik)
-#   allPoints = unique(as.vector(datC2))
-#   toTest = profileLogLik[allPoints,]
-#   toTest[,'profile'] = toTest[,'profile'] + a
-#   inHull = geometry::inhulln(datC2, as.matrix(toTest))
-#   toUse = profileLogLik[allPoints,][!inHull,]
-#   toTest = profileLogLik[allPoints,]
-#   
-#   interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse), m=m, fx=TRUE), data=toUse)
-#   prof1 = data.frame(x1=seq(min(toUse[,1])-0.1, max(toUse[,1])+0.1, len=1001))
-#   prof1$z = predict(interp1, prof1)
-#   
-#   output <- list(toUse = toUse, toTest = toTest, prof=prof1)
-#   
-#   output
-# }
 
 
 
@@ -944,8 +959,8 @@ likfitLgmGpu <- function(model,
                          shapeRestrict=1000,
                          paramToEstimate, #variance and regression parameters are always estimated if not given,
                          boxcox,  # boxcox is always estimated
-                         Betas,
-                         sdSpatial,
+                         Betas = NULL,
+                         sdSpatial = NULL,
                          cilevel=0.95,  # decimal
                          type = c("float", "double")[1+gpuInfo()$double_support],
                          reml=FALSE, 
@@ -961,30 +976,21 @@ likfitLgmGpu <- function(model,
   formula = model$model$formula
   coordinates = model$data@coords
   
-  if(isTRUE(params==NULL) & isTRUE(boxcox==NULL)){
-    if(isTRUE(alpha==NULL)){
+  if(is.null(params) & is.null(boxcox)){
+    if(is.null(alpha)){
       stop('alpha is not provided')
-    }
+    }else{
     a <- gpuLik::configParams(model, alpha=alpha, shapeRestrict=shapeRestrict)
     params = do.call(rbind, a[1:length(alpha)])
     paramsUse = rbind(model$opt$mle[colnames(params)],
                       params)
     b <- unlist(a[length(alpha)+1])
   }
+  }
   
-  
-  if(isTRUE(params!=NULL) & isTRUE(boxcox==NULL)){
+  if(!is.null(params) & is.null(boxcox)){
     stop("require boxcox values")
   }
-  
-  
-  if(missing(Betas)){
-    stop('Betas matrix missing')
-  }
-  
-  if(missing(sdSpatial)){
-    stop('variance matrix missing')
-  }             
   
   
   result1 <- getProfLogL(data=data,
@@ -1000,7 +1006,21 @@ likfitLgmGpu <- function(model,
                          Nlocal, 
                          NlocalCache, 
                          verbose=verbose)
-  
+
+
+  if(is.null(Betas)| is.null(sdSpatial)){
+    #stop('Betas matrix missing')
+    OutputBs <- ParamsFromLgm(ModelSummary = model$summary,      #lgm model
+                              covariates = result1$predictors)        # a string vector
+    
+    if(is.null(Betas))
+    Betas <- OutputBs$Betas
+    
+    if(is.null(sdSpatial))
+    sdSpatial <- OutputBs$sdSpatial
+
+  }
+ 
   
   result2 <- prof1dCov(LogLik = result1$LogLik,  # cpu matrix
                        XVYXVX = result1$XVYXVX,  # cpu matrix
@@ -1046,7 +1066,7 @@ likfitLgmGpu <- function(model,
   finalTable <- result2$summary
   finalTable[1:3,]<-rbind(Betasoutput$estimates[,c(1:3)],sigmaoutput$estimates[,c(1:3)])
   
-  if(isTRUE(params==NULL)){
+  if(is.null(params)){
     Output <- list(summary = finalTable,
                    breaks = result2$breaks,
                    mleIndex = result1$mleIndex,
