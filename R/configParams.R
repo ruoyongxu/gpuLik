@@ -1463,12 +1463,12 @@ getHessianNolog <- function(Model,
          vector <- out_list[[i]][,'nugget']
          for(j in 1:(length(vector)*1/2)){
            if(vector[j]<0){
-             vector[j] = 0
+             vector[j] = 0 
            }
          }
          for(j in (length(vector)*1/2+1):length(vector)){
            if(vector[j]<0){
-             vector[j] = -vector[j]#stats::runif(1, 0, randomNugget)
+             vector[j] = stats::runif(1, 0, 3) #-vector[j]#
            }
          }
       out_list[[i]][,'nugget'] <- vector

@@ -48,7 +48,7 @@
   }
 
   LogLik_optimized = matrix(0, nrow=m, ncol=ncol(Betas))
-  breaks <- rep(0, ncol(Betas))
+  #breaks <- rep(0, ncol(Betas))
   Table <- matrix(NA, nrow=ncol(Betas), ncol=4)
   colnames(Table) <-  c("MLE", paste(c('lower', 'upper'), cilevel*100, 'ci', sep = ''),"maximum")
   #index <- matrix(0, nrow=m, ncol=2)
@@ -252,8 +252,8 @@ if(reml==FALSE){
     }
     index<-which.max(LogLik)
     #f1 <- splinefun(Betas, LogLik, method = "fmm")
-    breaks[a] <- max(LogLik) - qchisq(cilevel,  df = 1)/2
-    plot(BetaSlice, LogLik-breaks[a],  ylim = max(LogLik-breaks[a]) + c(-3, 0.2), xlim = range(BetaSlice[max(LogLik-breaks[a]) - LogLik+breaks[a] < 3]), cex=0.2, xlab=paste('beta',a), ylab="profileL", col='blue')
+    breaks <- max(LogLik) - qchisq(cilevel,  df = 1)/2
+    plot(BetaSlice, LogLik-breaks,  ylim = max(LogLik-breaks) + c(-3, 0.2), xlim = range(BetaSlice[max(LogLik-breaks) - LogLik+breaks < 3]), cex=0.2, xlab=paste('beta',a), ylab="profileL", col='blue')
     abline(h=0, lty = 2, col='black')
     
     # temp <- qchisq(cilevel,  df = 1)/2
@@ -264,7 +264,7 @@ if(reml==FALSE){
     
     
     if(convexHull == TRUE){
-    profileLogLik <- as.data.frame(cbind(BetaSlice, LogLik-breaks[a]))
+    profileLogLik <- as.data.frame(cbind(BetaSlice, LogLik-breaks))
     colnames(profileLogLik) <- c("x1",'profile')
     datC2 = geometry::convhulln(profileLogLik)
     allPoints = unique(as.vector(datC2))
@@ -288,12 +288,12 @@ if(reml==FALSE){
     curve(f1(x), add = TRUE, col = 2, n = 1001)
     profBetas[,c((2*a-1):(2*a))] <- as.matrix(prof)
     }else if(convexHull == FALSE){
-      f1 <- approxfun(BetaSlice, LogLik-breaks[a])
+      f1 <- approxfun(BetaSlice, LogLik-breaks)
       curve(f1(x), add = TRUE, col = 2, n = 1001)
       # BetaSlice2 <- sort(BetaSlice)
-      # cc <- (LogLik-breaks[a])[order(BetaSlice,decreasing = F)]
+      # cc <- (LogLik-breaks)[order(BetaSlice,decreasing = F)]
       # lines(BetaSlice2, cc,col='green')
-      #plot(BetaSlice,LogLik-breaks[a], cex=0.2)
+      #plot(BetaSlice,LogLik-breaks, cex=0.2)
     }
     MLE <- BetaSlice[index]
     #result <- optimize(f1, c(lower, upper), maximum = TRUE, tol = 0.0000000001)  # added 3 more 0s to get a accurate MLE for beta2 in swiss
@@ -304,10 +304,10 @@ if(reml==FALSE){
     # text(ci[1], -3, round(ci[1],digits = 3))
     # text(ci[2], -3, round(ci[2],digits = 3))
 
-    #abline(h=breaks[a], lty = 2)
-    #f2 <- splinefun(Betas, LogLik-breaks[a], method = "fmm")
-    #f2 <- approxfun(Betas, LogLik-breaks[a])
-    #plot(Betas,LogLik-breaks[a])
+    #abline(h=breaks, lty = 2)
+    #f2 <- splinefun(Betas, LogLik-breaks, method = "fmm")
+    #f2 <- approxfun(Betas, LogLik-breaks)
+    #plot(Betas,LogLik-breaks)
     #curve(f2(x), add = TRUE, col = 2, n = 1001)
     # ci <- rootSolve::uniroot.all(f1, lower = lower, upper = upper)
 

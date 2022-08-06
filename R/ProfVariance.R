@@ -9,8 +9,8 @@
        profVariance<- function(sdSpatial, #a vector  given by the user 
                                cilevel=0.95,
                                Nobs, 
-                               Nparam,
                                Ndata,
+                               Nparam,
                                detVar, 
                                detReml,
                                ssqResidual, 
