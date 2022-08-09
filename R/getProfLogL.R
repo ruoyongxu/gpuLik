@@ -384,7 +384,6 @@ prof1dCov <- function(LogLik,  # cpu matrix
     
     points(exp(0.5*toTest[,1]), toTest[,2], col='red', cex=0.6)
     points(exp(0.5*toUse[,1]), toUse[,2], col='blue', cex=0.6, pch=3)
-    lines(profsumLogRange$x1, profsumLogRange$z, col = 'green')
     lines(exp(0.5*profsumLogRange$x1), profsumLogRange$z, col = 'green')
     abline(h = 0, lty = 2, col='red')
     lower = min(newdata$x1)
