@@ -292,7 +292,7 @@ getHessianNolog <- function(Model,
   
   
 
-  boxcoxSetup <- stats::qnorm(c(0.01, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 0.99), mean=Model$parameters['boxcox'], sd = sqrt(solve((-boxcoxHessian))))
+  boxcoxSetup <- stats::qnorm(c(0.01, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 0.99), mean=Model$parameters['boxcox'], sd = sqrt(solve(-boxcoxHessian)))
   
   
 
