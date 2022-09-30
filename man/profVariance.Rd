@@ -10,6 +10,7 @@ profVariance(
   Nobs,
   Ndata,
   Nparam,
+  Ncov,
   detVar,
   detReml,
   ssqResidual,
