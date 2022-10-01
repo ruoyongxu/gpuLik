@@ -1,6 +1,7 @@
 #' @title gpu elements
 #' @useDynLib gpuLik
 #' @export
+
 getProfLogL <- function(data,
                         formula, 
                         coordinates,
@@ -260,7 +261,7 @@ getProfLogL <- function(data,
 #' @title Betas and sigma automatic configuration
 #' @useDynLib gpuLik
 #' @export
-ParamsFromLgm <- function(ModelSummary,      #lgm model
+ParamsFromLgm <- function(modelSummary,      #lgm model
                           covariates,        # a string vector
                           Betaleft = 0.5,
                           Betaright = 0.3,
@@ -952,7 +953,7 @@ prof1dCov <- function(LogLik,  # cpu matrix
 
 
 #' @export
-likfitLgmGpu <- function(model,
+likfitLgmGpu <- function(model,  # can be a list, note that the model which does not fix any parameter should always be put the first in the list!!!
                          params = NULL, # CPU matrix for now, users need to provide proper parameters given their specific need
                          alpha = NULL,
                          shapeRestrict=1000,
@@ -962,7 +963,7 @@ likfitLgmGpu <- function(model,
                          sdSpatial = NULL,
                          cilevel=0.95,  # decimal
                          type = c("float", "double")[1+gpuInfo()$double_support],
-                         reml=FALSE, 
+                         #reml=FALSE, 
                          convexHullForBetas = FALSE,
                          NparamPerIter,
                          Nglobal,
@@ -970,20 +971,22 @@ likfitLgmGpu <- function(model,
                          NlocalCache,
                          verbose=c(1,0)){
   
-  
-  data = model$data
-  formula = model$model$formula
-  coordinates = model$data@coords
+  model_1 = model[[1]]
+  data = model_1$data
+  formula = model_1$model$formula
+  coordinates = model_1$data@coords
+  reml = model_1$model$reml
   
   if(is.null(params) & is.null(boxcox)){
     if(is.null(alpha)){
       stop('alpha is not provided')
     }else{
-    a <- gpuLik::configParams(model, alpha=alpha, shapeRestrict=shapeRestrict)
-    params = do.call(rbind, a[1:length(alpha)])
-    paramsUse = rbind(model$opt$mle[colnames(params)],
-                      params)
-    b <- unlist(a[length(alpha)+1])
+    configed <- gpuLik::configParams(model, alpha=alpha, shapeRestrict=shapeRestrict)
+    paramsUse <- configed$params
+    #params = do.call(rbind, a[1:length(alpha)])
+    #paramsUse = rbind(model$opt$mle[colnames(params)],
+    #                  params)
+    b <- configed$boxcox
   }
   }
   
@@ -996,7 +999,7 @@ likfitLgmGpu <- function(model,
                          formula=formula, 
                          coordinates=coordinates,
                          params=paramsUse,  # CPU matrix 
-                         boxcox=c(seq(b[1],b[9],len=32),model$parameters['boxcox']),  # boxcox is always estimated
+                         boxcox=sort(seq(b[1],b[9],len=32),model_1$parameters['boxcox']),  # boxcox is always estimated
                          type = type,
                          NparamPerIter = NparamPerIter,
                          gpuElementsOnly = FALSE,
@@ -1004,12 +1007,12 @@ likfitLgmGpu <- function(model,
                          Nglobal, 
                          Nlocal, 
                          NlocalCache, 
-                         verbose=verbose)
+                         verbose=FALSE)
 
 
   if(is.null(Betas)| is.null(sdSpatial)){
     #stop('Betas matrix missing')
-    OutputBs <- ParamsFromLgm(ModelSummary = model$summary,      #lgm model
+    OutputBs <- ParamsFromLgm(modelSummary = model_1$summary,      #lgm model
                               covariates = result1$predictors)        # a string vector
     
     if(is.null(Betas))
@@ -1021,7 +1024,7 @@ likfitLgmGpu <- function(model,
   }
  
   
-  result2 <- prof1dCov(LogLik = result1$LogLik,  # cpu matrix
+  correlationOutput <- prof1dCov(LogLik = result1$LogLik,  # cpu matrix
                        XVYXVX = result1$XVYXVX,  # cpu matrix
                        ssqResidual = result1$ssqResidual,  # cpu matrix
                        paramToEstimate = paramToEstimate,
@@ -1037,7 +1040,7 @@ likfitLgmGpu <- function(model,
   
   
   
-  Betasoutput<-gpuLik::Prof1dBetas(Betas=Betas, 
+     betasOutput<-gpuLik::Prof1dBetas(Betas=Betas, 
                                       cilevel=cilevel,  
                                       result1$Nobs,  
                                       result1$Ndata,
@@ -1048,26 +1051,29 @@ likfitLgmGpu <- function(model,
                                       result1$ssqY,   
                                       result1$XVYXVX,   
                                       result1$jacobian,
+                                      reml = reml,
                                       convexHull = convexHullForBetas)
   
   
   
-  sigmaoutput <- gpuLik::profVariance(sdSpatial, 
+  varianceOutput <- gpuLik::profVariance(sdSpatial, 
                                          cilevel=cilevel,
                                          Nobs = result1$Nobs,
-                                         Nparam = result1$Nparam,
                                          Ndata = result1$Ndata,
+                                         Nparam = result1$Nparam,
+                                         Ncov = result1$Ncov,
                                          detVar = result1$detVar,
                                          detReml = result1$detReml,
                                          ssqResidual = result1$ssqResidual,
-                                         jacobian = result1$jacobian)
+                                         jacobian = result1$jacobian,
+                                         reml = reml)
   
-  finalTable <- result2$summary
-  finalTable[1:(nrow(Betasoutput$estimates)+1),]<-rbind(Betasoutput$estimates[,c(1:3)],sigmaoutput$estimates[,c(1:3)])
+  finalTable <- correlationOutput$summary
+  finalTable[1:(nrow(betasOutput$estimates)+1),]<-rbind(betasOutput$estimates[,c(1:3)],varianceOutput$estimates[,c(1:3)])
   
   if(is.null(params)){
     Output <- list(summary = finalTable,
-                   breaks = result2$breaks,
+                   breaks = correlationOutput$breaks,
                    mleIndex = result1$mleIndex,
                    LogLik = result1$LogLik,
                    params = result1$params,
@@ -1087,7 +1093,7 @@ likfitLgmGpu <- function(model,
     
   }else{
     Output <- list(summary = finalTable,
-                   breaks = result2$breaks,
+                   breaks = correlationOutput$breaks,
                    mleIndex = result1$mleIndex,
                    LogLik = result1$LogLik,
                    boxcox = result1$boxcox,

@@ -5,7 +5,7 @@
 \title{Betas and sigma automatic configuration}
 \usage{
 ParamsFromLgm(
-  ModelSummary,
+  modelSummary,
   covariates,
   Betaleft = 0.5,
   Betaright = 0.3,
