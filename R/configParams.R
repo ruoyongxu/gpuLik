@@ -203,7 +203,7 @@ getHessianNolog <- function(Model,
                                   type = "double",
                                   NparamPerIter=100,
                                   gpuElementsOnly=FALSE,
-                                  reml=FALSE,
+                                  reml=Model$model$reml,
                                   Nglobal=c(64,64),
                                   Nlocal=c(16,8),
                                   NlocalCache=2000,
@@ -1114,19 +1114,18 @@ getHessianNolog <- function(Model,
                              boxcox = NULL,# a vector of confidence levels 1-alpha
                              shapeRestrict = 1000#,                             randomNugget = 0
     ){
-      
 
       
-      ## get the Hessian
+      # get the Hessian
       if(logNugget == TRUE){
       output <- getHessianLog(Model = Model,
-                           Mle = Mle, 
+                           Mle = Mle,
                            boxcox = boxcox)
       }else{
        output <- getHessianNolog(Model = Model,
                            Mle = Mle, 
                            boxcox = boxcox) 
-      }
+       }
    
       Mle <- output$originalPoint
       MleGamma <- output$centralPointGamma
