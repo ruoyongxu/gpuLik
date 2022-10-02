@@ -269,7 +269,7 @@ ParamsFromLgm <- function(modelSummary,      #lgm model
                           sdSpatialright = 1.05){
   
   
-  EstMatrix <- ModelSummary[covariates,c('estimate','ci0.005', 'ci0.995')]
+  EstMatrix <- modelSummary[covariates,c('estimate','ci0.005', 'ci0.995')]
   
   Betas <- matrix(0, nrow=200, ncol=length(covariates))
   colnames(Betas) <- covariates
@@ -283,7 +283,7 @@ ParamsFromLgm <- function(modelSummary,      #lgm model
   
   
   sdSpatial <- sort(
-    c( ModelSummary['sdSpatial','estimate'], seq(ModelSummary['sdSpatial','ci0.005']*sdSpatialleft,  ModelSummary['sdSpatial','ci0.995']*sdSpatialright, len=59))
+    c( modelSummary['sdSpatial','estimate'], seq(modelSummary['sdSpatial','ci0.005']*sdSpatialleft,  modelSummary['sdSpatial','ci0.995']*sdSpatialright, len=59))
   ) 
   
   
@@ -971,7 +971,11 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                          NlocalCache,
                          verbose=c(1,0)){
   
+  if(is.list(unlist(model[[1]]))){
   model_1 = model[[1]]
+  }else{
+  model_1 = model
+   }
   data = model_1$data
   formula = model_1$model$formula
   coordinates = model_1$data@coords
@@ -987,6 +991,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
     #paramsUse = rbind(model$opt$mle[colnames(params)],
     #                  params)
     b <- configed$boxcox
+    boxcox <- seq(b[1],b[9],len=33)
   }
   }
   
@@ -999,7 +1004,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                          formula=formula, 
                          coordinates=coordinates,
                          params=paramsUse,  # CPU matrix 
-                         boxcox=sort(seq(b[1],b[9],len=32),model_1$parameters['boxcox']),  # boxcox is always estimated
+                         boxcox = boxcox,  # boxcox is always estimated
                          type = type,
                          NparamPerIter = NparamPerIter,
                          gpuElementsOnly = FALSE,
@@ -1007,7 +1012,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                          Nglobal, 
                          Nlocal, 
                          NlocalCache, 
-                         verbose=FALSE)
+                         verbose=c(0,0))
 
 
   if(is.null(Betas)| is.null(sdSpatial)){
@@ -1089,7 +1094,8 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                    ssqY = result1$ssqY,    
                    XVYXVX = result1$XVYXVX,
                    ssqBetahat = result1$ssqBetahat,
-                   ssqResidual = result1$ssqResidual)   
+                   ssqResidual = result1$ssqResidual,
+                   reml = reml)   
     
   }else{
     Output <- list(summary = finalTable,
@@ -1107,7 +1113,8 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                    ssqY = result1$ssqY,    
                    XVYXVX = result1$XVYXVX,
                    ssqBetahat = result1$ssqBetahat,
-                   ssqResidual = result1$ssqResidual)
+                   ssqResidual = result1$ssqResidual,
+                   reml = reml)
   }     
   
   

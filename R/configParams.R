@@ -511,9 +511,11 @@ getHessianNolog <- function(Model,
       # out_list[[length(alpha)+1]] <- boxcoxSetup
       # 
       # out_list
-     
-      outPut <- list()
+      
+      optParams = rbind(Model$opt$mle[paramsColnames])
+      optParams = cbind(optParams, alpha = 0)
 
+      outPut <- list()
       outPut[[1]] = do.call(rbind, out_list[1:length(alpha)])
       
       if(length(Mle)==5){
@@ -523,7 +525,9 @@ getHessianNolog <- function(Model,
         repN = 120
         outPut[[1]] <- cbind(outPut[[1]], alpha = rep(alpha, each=repN))
       }
-  
+      
+      outPut[[1]] = rbind(optParams,   outPut[[1]])
+      rownames(outPut[[1]]) <- NULL
       outPut[[2]] <- boxcoxSetup
       names(outPut) <- c('representativeParamaters', 'boxcox')
       outPut
@@ -567,12 +571,12 @@ getHessianNolog <- function(Model,
       }  
     
       
-      optParams = lapply(Model, function(xx) xx$opt$mle[paramsColnames])
-      optParams = do.call(rbind, optParams)
-      optParams = cbind(optParams, alpha = 0)
+      # optParams = lapply(Model, function(xx) xx$opt$mle[paramsColnames])
+      # optParams = do.call(rbind, optParams)
+      # optParams = cbind(optParams, alpha = 0)
       
       paramsAll = do.call(rbind, resultInMatrix)
-      paramsAll = rbind(optParams,paramsAll)
+      # paramsAll = rbind(optParams,paramsAll)
       rownames(paramsAll) <- NULL
       
       result = list(
