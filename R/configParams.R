@@ -549,10 +549,10 @@ getHessianNolog <- function(Model,
                             boxcox = NULL,# a vector of confidence levels 1-alpha
                             shapeRestrict = 1000){
       
-      if(!all(c('model','summary','predict') %in% names(Model)) ) {
-        Model = list(Model)
+      if(!is.list(Model) ) {
+        stop ("Model should be a list object")
       }
-      result = lapply(Model, configParamsSingle,
+      result = lapply(Model, gpuLik::configParamsSingle,
                       alpha = alpha, 
                       Mle = Mle,
                       boxcox = boxcox,
@@ -563,7 +563,7 @@ getHessianNolog <- function(Model,
       resultInMatrix = list()
       
       for(D in 1:length(result)) {
-        resInMatrix[[D]] = result[[D]]$representativeParamaters
+        resultInMatrix[[D]] = result[[D]]$representativeParamaters
       }  
     
       
@@ -571,12 +571,12 @@ getHessianNolog <- function(Model,
       optParams = do.call(rbind, optParams)
       optParams = cbind(optParams, alpha = 0)
       
-      paramsAll = do.call(rbind, resInMatrix)
+      paramsAll = do.call(rbind, resultInMatrix)
       paramsAll = rbind(optParams,paramsAll)
       rownames(paramsAll) <- NULL
       
       result = list(
-        params = paramsAll,
+        representativeParamaters = paramsAll,
         boxcox = result[[1]]$boxcox,
         reml = Model[[1]]$model$reml,
         alpha = alpha

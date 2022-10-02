@@ -982,7 +982,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
       stop('alpha is not provided')
     }else{
     configed <- gpuLik::configParams(model, alpha=alpha, shapeRestrict=shapeRestrict)
-    paramsUse <- configed$params
+    paramsUse <- configed$representativeParamaters[,1:5]
     #params = do.call(rbind, a[1:length(alpha)])
     #paramsUse = rbind(model$opt$mle[colnames(params)],
     #                  params)
