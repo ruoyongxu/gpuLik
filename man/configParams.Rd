@@ -7,6 +7,7 @@
 configParams(
   Model,
   alpha = c(0.001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.95, 0.99),
+  alphasecond = NULL,
   Mle = NULL,
   boxcox = NULL,
   shapeRestrict = 1000
