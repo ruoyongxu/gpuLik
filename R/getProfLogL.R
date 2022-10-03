@@ -984,14 +984,22 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
   if(is.null(params) & is.null(boxcox)){
     if(is.null(alpha)){
       stop('alpha is not provided')
-    }else{
-    configed <- gpuLik::configParams(model, alpha=alpha, shapeRestrict=shapeRestrict)
-    paramsUse <- configed$representativeParamaters[,1:5]
-    #params = do.call(rbind, a[1:length(alpha)])
-    #paramsUse = rbind(model$opt$mle[colnames(params)],
-    #                  params)
-    b <- configed$boxcox
-    boxcox <- seq(b[1],b[9],len=33)
+    }else if(is.list(unlist(model[[1]]))){
+       configed <- gpuLik::configParams(model, alpha=alpha, alphasecond = NULL, shapeRestrict=shapeRestrict)
+       paramsUse <- configed$representativeParamaters[,1:5]
+       b <- configed$boxcox
+       boxcox <- seq(b[1],b[9],len=33)
+    }else if(!is.list(unlist(model[[1]]))){
+      configed <- gpuLik::configParamsSingle(model, alpha=alpha, shapeRestrict=shapeRestrict)
+      paramsUse <- configed$representativeParamaters[,1:5]
+      paramsColnames = colnames(paramsUse)
+      optParams = Model$opt$mle[paramsColnames]
+      optParams = rbind(optParams)
+      rownames(optParams) <- NULL
+      paramsUse = rbind(optParams,paramsUse)
+      
+      b <- configed$boxcox
+      boxcox <- seq(b[1],b[9],len=33)
   }
   }
   
