@@ -15,7 +15,8 @@ profVariance(
   detReml,
   ssqResidual,
   jacobian,
-  reml = FALSE
+  reml = FALSE,
+  convexHull = FALSE
 )
 }
 \description{
