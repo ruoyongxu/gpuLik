@@ -837,7 +837,7 @@
   }
   
   
-  if('anisoRatio' %in% paramToEstimate & ('anisoAngleRadians' %in% paramToEstimate)){
+  if('anisoRatio' %in% paramToEstimate & ('anisoAngleRadians' %in% paramToEstimate) & ('shape' %in% paramToEstimate)){
     Output <- list(LogLik=LogLikcpu,
                    breaks = breaks,
                    breaks2d = breaks2d,
@@ -865,7 +865,7 @@
                    XVYXVX = XVYXVX2)    
   }
   
-  if('aniso1' %in% paramToEstimate & ('aniso2' %in% paramToEstimate)){
+  if('aniso1' %in% paramToEstimate & ('aniso2' %in% paramToEstimate) & ('shape' %in% paramToEstimate)){
     Output <- list(LogLik=LogLikcpu,
                    breaks = breaks,
                    breaks2d = breaks2d,
