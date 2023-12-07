@@ -23,6 +23,8 @@ getHessianNolog <- function(Model,
   
   if('range' %in% names(Mle)){
     sumLogRange <- log(Mle['range']^2/Mle['anisoRatio'])
+  } else{
+    sumLogRange = NA
   }
   names(sumLogRange) <- 'sumLogRange'
   
@@ -62,7 +64,7 @@ getHessianNolog <- function(Model,
     }
     names(MleGamma)[whichLogged] = paste("log(", names(Mle)[whichLogged], ")",sep="")
     
-  }else{
+  }else{ # either no shape or shape > 4
     if('anisoRatio' %in% names(Mle)){
       if(!('anisoAngleRadians' %in% names(Mle))){
         stop('anisoRatio and anisoAngleRadians must be together')
@@ -295,7 +297,12 @@ getHessianNolog <- function(Model,
   
   
   
-  boxcoxSetup <- stats::qnorm(c(0.01, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 0.99), mean=Model$parameters['boxcox'], sd = sqrt(solve(-boxcoxHessian)))
+  boxcoxSetup <- stats::qnorm(
+    c(0.01, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 0.99), 
+    mean=Model$parameters['boxcox'], 
+    sd = sqrt(abs(1/boxcoxHessian)))
+    # !!! was sqrt(solve(-boxcoxHessian)))
+    # but boxcoxHessian is positive for soil example
   
   
   output = list(HessianMat = HessianMat,
@@ -579,7 +586,7 @@ configParams = function(Model,  # note that the model which does not fix any par
      
      boxcox = result[[1]]$boxcox
      paramsAll = do.call(rbind, resultInMatrix)
-   }else{
+   }else{ # have alphasecond
      
      firstmodel <- configParamsSingle(Model[[1]], 
                                       alpha=alpha,
@@ -596,7 +603,8 @@ configParams = function(Model,  # note that the model which does not fix any par
                      Mle = Mle,
                      boxcox = boxcox,
                      shapeRestrict = shapeRestrict, 
-                     data = data, coordinates = coordinates)
+                     data = data, 
+                     coordinates = coordinates)
      
      resultInMatrix = list()
      

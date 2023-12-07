@@ -274,9 +274,9 @@ theNames = apply(expand.grid('par',1:nrow(paramsGpu), 'sim', 1:Nsim), 1, paste, 
 ```
 
 ```{r plotSimSetup, eval = F}
-library(raster)
-simRaster = brick(myRaster, 
-  nl = ncol(simMat)*nrow(paramsGpu))
+library(terra)
+simRaster = rast(myRaster, 
+  nlyrs = ncol(simMat)*nrow(paramsGpu))
 system.time(values(simRaster) <- as.vector(as.matrix(simMat)))
 names(simRaster) = theNames
 ```
@@ -284,7 +284,7 @@ names(simRaster) = theNames
 ```{r plotSim, fig.height=5, fig.width=4, out.width="paste0(98/nrow(paramsGpu), '%')", fig.cap='simulations', fig.subcap = 'theNames', eval = F}
 par(mar=rep(0.1, 4))
 for(D in names(simRaster)) {
-  plot(extent(simRaster))
+  plot(terra::ext(simRaster))
   plot(simRaster[[D]], legend=FALSE, add=TRUE)
 }
   
@@ -331,8 +331,9 @@ solve(L, as.matrix(simMat[1:ncol(outputChol),]))[1:12, ]
 
 ```{r batchMaternSwussRaub, eval=FALSE}
 data('swissRain', package='geostatsp')
+swissRain = terra::unwrap(swissRain)
 sr2 = swissRain[1:4,]
-dist(terra::crds(sr))
+dist(terra::crds(sr2))
 myParamsSR = geostatsp::fillParam(c(
   variance=2,nugget=1, anisoAngleRadians=0,
   range=12*1000, shape=1, anisoRatio = 1))
