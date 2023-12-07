@@ -4,7 +4,10 @@
 
 getHessianNolog <- function(Model,
                             Mle = NULL,
-                            boxcox = NULL){
+                            boxcox = NULL,
+                            data = Model$data, 
+                            coordinates = terra::crds(data)
+                            ){
   
   delta = 0.01  
   # order the params
@@ -195,9 +198,9 @@ getHessianNolog <- function(Model,
   
   
   
-  result1<-gpuLik::getProfLogL(data= Model$data,
+  result1<-gpuLik::getProfLogL(data= data,
                                formula=Model$model$formula,
-                               coordinates=Model$data@coords,
+                               coordinates=coordinates,
                                params=Params1,
                                boxcox = boxcox,
                                type = "double",
@@ -322,7 +325,9 @@ configParamsSingle <- function(Model,
                          alpha=c(0.001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.95, 0.99),
                          Mle = NULL,
                          boxcox = NULL,
-                         shapeRestrict = 1000
+                         shapeRestrict = 1000,
+                         data = Model$data, 
+                         coordinates = terra::crds(data)
 ){
   
   
@@ -331,7 +336,9 @@ configParamsSingle <- function(Model,
 
     output <- getHessianNolog(Model = Model,
                               Mle = Mle, 
-                              boxcox = boxcox) 
+                              boxcox = boxcox,
+                              data = data,
+                              coordinates = coordinates) 
 
   
   Mle <- output$originalPoint
@@ -553,14 +560,16 @@ configParams = function(Model,  # note that the model which does not fix any par
                         alphasecond = NULL,
                         Mle = NULL,
                         boxcox = NULL,# a vector of confidence levels 1-alpha
-                        shapeRestrict = 1000){
+                        shapeRestrict = 1000,
+                        data = Model$data,
+                        coordinates = terra::crds(data)){
   
    if(is.null(alphasecond)){
      result = lapply(Model, configParamsSingle,
                      alpha = alpha, 
                      Mle = Mle,
                      boxcox = boxcox,
-                     shapeRestrict = shapeRestrict)
+                     shapeRestrict = shapeRestrict, data=data, coordinates=coordinates)
      
      resultInMatrix = list()
      
@@ -583,7 +592,8 @@ configParams = function(Model,  # note that the model which does not fix any par
                      alpha = alphasecond, 
                      Mle = Mle,
                      boxcox = boxcox,
-                     shapeRestrict = shapeRestrict)
+                     shapeRestrict = shapeRestrict, 
+                     data = data, coordinates = coordinates)
      
      resultInMatrix = list()
      
