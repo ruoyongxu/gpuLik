@@ -955,6 +955,7 @@ prof1dCov <- function(LogLik,  # cpu matrix
 #' @export
 likfitLgmGpu <- function(model,  # can be a list, note that the model which does not fix any parameter should always be put the first in the list!!!
                          params = NULL, # CPU matrix for now, users need to provide proper parameters given their specific need
+                         data, 
                          alpha = NULL,
                          shapeRestrict=1000,
                          paramToEstimate, #variance and regression parameters are always estimated if not given,
@@ -975,10 +976,12 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
   model_1 = model[[1]]
   }else{
   model_1 = model
-   }
-  data = model_1$data
+  }
+  if(missing(data)) {
+    data = model_1$data
+  }
   formula = model_1$model$formula
-  coordinates = model_1$data@coords
+  coordinates = terra::crds(data)
   reml = model_1$model$reml
   
   if(is.null(params) & is.null(boxcox)){

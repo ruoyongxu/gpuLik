@@ -581,7 +581,10 @@ configParams = function(Model,  # note that the model which does not fix any par
      paramsAll = do.call(rbind, resultInMatrix)
    }else{
      
-     firstmodel <- configParamsSingle(Model[[1]], alpha=alpha)
+     firstmodel <- configParamsSingle(Model[[1]], 
+                                      alpha=alpha,
+                                      data=data,
+                                      coordinates=coordinates)
      boxcox = firstmodel$boxcox
      restlist = list()
      for (i in 2:length(Model)){
