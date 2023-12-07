@@ -61,10 +61,8 @@ if(gpuR::gpuInfo()$deviceMemory > 10^9){
    theType = "double"
 }
 
-myRaster = raster::raster( raster::extent(0,Ngrid[1]/Ngrid[2],5,6),Ngrid[1], Ngrid[2])
-coordsSp = sp::SpatialPoints(raster::xyFromCell(myRaster, 1:raster::ncell(myRaster)))
-#head(coordsSp@coords,15)
-#dist(coordsSp@coords)
+myRaster = terra::rast(terra::ext(0,Ngrid[1]/Ngrid[2],5,6),Ngrid[1], Ngrid[2])
+coordsSp = terra::vect(terra::xyFromCell(myRaster, 1:terra::ncell(myRaster)))
 ```
 
 
@@ -99,7 +97,8 @@ myParamsBatch[,1:7]
 ```
 
 ```{r outputBatchCreate, eval=TRUE}
-coordsGpu = vclMatrix(coordsSp@coords, nrow(coordsSp@coords), ncol(coordsSp@coords), type=theType)
+coordsGpu = vclMatrix(terra::crds(coordsSp), nrow(terra::crds(coordsSp)), 
+                      ncol(terra::crds(coordsSp)), type=theType)
 outputBatchF = vclMatrix(0, nrow(myParamsBatch)*nrow(coordsGpu), nrow(coordsGpu), type=gpuR::typeof(coordsGpu))
 
 paramsGpu = vclMatrix(cbind(
@@ -333,8 +332,7 @@ solve(L, as.matrix(simMat[1:ncol(outputChol),]))[1:12, ]
 ```{r batchMaternSwussRaub, eval=FALSE}
 data('swissRain', package='geostatsp')
 sr2 = swissRain[1:4,]
-sr2@coords = sr2@coords
-dist(sr2@coords)
+dist(terra::crds(sr))
 myParamsSR = geostatsp::fillParam(c(
   variance=2,nugget=1, anisoAngleRadians=0,
   range=12*1000, shape=1, anisoRatio = 1))
@@ -347,7 +345,7 @@ outputSwissRain = vclMatrix(0,
         nrow(myParamsBatchSR)*length(sr2),length(sr2),type='double')
 gpuBatchMatrix::maternBatch(
     var=outputSwissRain,
-    coords=vclMatrix(sr2@coords, type='double'), 
+    coords=vclMatrix(terra::crds(sr2), type='double'), 
     param=vclMatrix(myParamsBatchSR, type='double'),  
     Nglobal = c(1,1,1), 
     Nlocal = c(1,1,1))
