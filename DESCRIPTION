@@ -1,16 +1,16 @@
 Package: gpuLik
-Version: 0.1
-Date: 2022-05-14
-Title: new name
+Version: 0.2
+Date: 2023-12-07
+Title: Likelihood calculations on GPU
 Author: Patrick Brown, Ruoyong Xu
-Description: Random numbers on the gpu
+Description: GPU processing of Gaussian spatial models
 Maintainer: Ruoyong Xu <ruoyong.xu@mail.utoronto.ca>
 License: GPL (>= 2)
 Encoding: UTF-8
 NeedsCompilation: yes
 Depends: R (>= 3.5.0), gpuR
 Imports: geostatsp, data.table
-Suggests: sp, knitr
+Suggests: terra, knitr
 LinkingTo:
 	RViennaCL (>= 1.7.1.4),
 	gpuR,

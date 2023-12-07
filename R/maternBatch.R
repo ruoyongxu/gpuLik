@@ -21,19 +21,16 @@ maternBatch <- function(param, #22 columns
                         startrow,   # new added
                         numberofrows){
   
-  if(any("raster" %in% attributes(class(myRaster))$package ) ) {
-    if(requireNamespace("raster")) {
-      coords = raster::xyFromCell(coords, 1:ncell(coords))
-    } else {
-      stop("install the raster package to use these coordinates")
-    }
-    
+  if(any(class(coords) == 'SpatRaster')) {
+      coords = terra::xyFromCell(coords, 1:ncell(coords))
+          
   }
 
-if('SpatialPoints' %in% names(coords)) {
-  coords = coords@coords
+if('SpatVect' %in% class(coords)) {
+  coords = terra::crds(coords)
 }
-  if(is.matrix(coords)) {
+  
+if(is.matrix(coords)) {
   coords = vclMatrix(coords, 
                      type = c('float','double')[1+gpuInfo()$double_support])
   }  
