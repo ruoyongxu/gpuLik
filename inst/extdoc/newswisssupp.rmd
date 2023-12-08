@@ -122,12 +122,13 @@ result1 <- gpuLik::getProfLogL(data=swissRain,
                                 params=paramsUse, 
                                 boxcox = seq(b[1],b[9],len=33),
                                 type = "double",
-                                NparamPerIter=400,
+                                data = terra::unwrap(swissDataWrap), 
+                                NparamPerIter=200,
                                 gpuElementsOnly = FALSE,
                                 reml=FALSE, 
                                 Nglobal=c(128,128),
                                 Nlocal=c(16,16),
-                                NlocalCache=2800,
+                                NlocalCache=2200,
                                 verbose=c(0,0))
 ```
 ```{r getproflogL2, cache=TRUE}
