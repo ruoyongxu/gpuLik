@@ -1,0 +1,578 @@
+---
+title: "swissrain data code"
+author: "ruoyong"
+date: '2022-05-06'
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r geostatsp, message=FALSE, cache=TRUE}
+library('geostatsp')
+data("swissRain")
+swissRain$elevation = extract(swissAltitude, swissRain)
+swissRes =  lgm( formula=rain~ elevation, 
+                 data=swissRain, grid=20,
+                 covariates=swissAltitude, 
+                 reml = FALSE, 
+                 fixBoxcox=FALSE, fixShape=FALSE, fixNugget = FALSE,  
+                 aniso=TRUE )
+swissRes2 =  lgm( formula=rain~ elevation, 
+                  data=swissRain, grid=20,
+                  covariates=swissAltitude, 
+                  reml = FALSE,
+                  shape=0.5, 
+                  fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+                  aniso=TRUE )
+swissRes3 =  lgm( formula=rain~ elevation, 
+                  data=swissRain, 
+                  grid=20,
+                  covariates=swissAltitude, 
+                  reml = FALSE,
+                  shape=0.9, 
+                  fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+                  aniso=TRUE )
+swissRes4 =  lgm( formula=rain~ elevation, 
+                  data=swissRain, grid=20,
+                  covariates=swissAltitude, 
+                  reml = FALSE,
+                  shape=10,
+                  fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+                  aniso=TRUE )
+swissRes5 =  lgm( formula=rain~ elevation, 
+                  data=swissRain, grid=20,
+                  covariates=swissAltitude, 
+                  reml = FALSE,
+                  shape=20, 
+                  fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+                  aniso=TRUE )
+swissRes6 =  lgm( formula=rain~ elevation, 
+                  data=swissRain, grid=20,
+                  covariates=swissAltitude, 
+                  reml = FALSE,
+                  shape=100, 
+                  fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+                  aniso=TRUE )
+swissRes$summary[,c('estimate','ci0.05', 'ci0.95')]
+```
+
+## R Markdown
+## Set the parameters
+```{r config, message=FALSE, results='hide', cache=FALSE}
+library(gpuLik)
+alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
+alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
+model_list <- list(swissRes, swissRes2,swissRes3,swissRes4,swissRes5,swissRes6)
+A <- gpuLik::configParams(Model = model_list, alpha=alpha1, alphasecond = alpha2)
+paramsUse <- A$representativeParamaters
+b <- A$boxcox
+```
+
+```{r config2,message=FALSE,results='hide', cache=TRUE}
+intercept<- sort(c(swissRes$summary['(Intercept)','estimate'], seq(0, 12, len=199)))
+cov1  <- sort(c(swissRes$summary['elevation','estimate'], seq(-7, 15, len=199)*1e-04))
+Betas <- cbind(intercept, cov1)
+sdSpatial <- c(seq(1.2, 5, len=199), swissRes$summary['sdSpatial','estimate'])
+```
+
+## Get the profie loglikelihoods and estimates for all model parameters 
+```{r onestep, cache=TRUE, eval=TRUE, message=FALSE, fig.show='hide'}
+result3<-gpuLik::likfitLgmGpu(model =swissRes,
+                         params=paramsUse, 
+                         paramToEstimate=c('range','combinedRange','shape','nugget', 
+                                           'aniso1', 'aniso2',"anisoRatio", 
+                                           "anisoAngleRadians",'boxcox'),
+                         boxcox = seq(b[1],b[9],len=33),
+                         Betas = Betas,
+                         sdSpatial = sdSpatial,
+                         cilevel=0.9,  
+                         type = "double",
+                         convexHullForBetas = FALSE,
+                         NparamPerIter=400,
+                         Nglobal=c(128,64),
+                         Nlocal=c(16,16),
+                         NlocalCache=2800,
+                         verbose=c(0,0))
+```
+
+```{r allestimates, cache=TRUE}
+# total parameter configurations for \omega
+nrow(paramsUse)
+result3$summary
+result3$reml
+result3$Infindex 
+swissRes$optim$logL
+max(result3$LogLik)
+```
+
+## Or get the profie loglikelihoods step by step
+```{r getProfLogL, cache=TRUE, message=FALSE, results='hide'}
+result1 <- gpuLik::getProfLogL(data=swissRain,
+                                formula=rain~ elevation,
+                                coordinates=swissRain@coords,
+                                params=paramsUse, 
+                                boxcox = seq(b[1],b[9],len=33),
+                                type = "double",
+                                NparamPerIter=400,
+                                gpuElementsOnly = FALSE,
+                                reml=FALSE, 
+                                Nglobal=c(128,128),
+                                Nlocal=c(16,16),
+                                NlocalCache=2800,
+                                verbose=c(0,0))
+```
+```{r getproflogL2, cache=TRUE}
+# indices of parameter sets that leads to NaN or infinity in Loglikelihood 
+result1$Infindex
+# total configurations for \lambda
+result1$Ndata
+# number of observations
+result1$Nobs
+# number of covariates in the model
+result1$Ncov
+# predictors in the model
+result1$predictors
+```
+
+## get the colorful profile plots
+```{r correlations}
+LogLikcpu = result1$LogLik  # cpu matrix
+XVYXVX = result1$XVYXVX  # cpu matrix
+ssqResidual = result1$ssqResidual  # cpu matrix
+paramToEstimate = c('range','combinedRange',"anisoRatio",
+                    'shape','nugget', 'sdNugget', 
+                    "anisoAngleRadians", 'aniso1', 
+                    'aniso2','boxcox')
+cilevel=0.9  # decimal
+paramsRenew = result1$paramsRenew 
+params = result1$paramsRenew
+boxcox = result1$boxcox  
+Ndata = result1$Ndata
+Nobs = result1$Nobs
+Ncov = result1$Ncov
+reml = FALSE
+predictors = result1$predictors
+chisqValue <- qchisq(cilevel,  df = 1)/2
+Table <- matrix(NA, nrow=length(paramToEstimate) + Ncov + 1, ncol=3)
+rownames(Table) <-  c(predictors, "sdSpatial", paramToEstimate)
+colnames(Table) <-  c("estimate", "lci", "uci")
+index <- which(LogLikcpu == max(LogLikcpu, na.rm = TRUE), arr.ind = TRUE)
+#################sigma hat#########################
+if(reml==FALSE)  {
+  Table["sdSpatial",1] <- sqrt(ssqResidual[index[1],index[2]]/Nobs)
+}else{         
+  Table["sdSpatial",1] <- sqrt(ssqResidual[index[1],index[2]]/(Nobs - Ncov))
+}
+maximum <- max(LogLikcpu)
+breaks = maximum - qchisq(cilevel,  df = 1)/2
+############### profile for covariance parameters #####################
+
+aniso1 <-  unname(sqrt(paramsRenew[,'anisoRatio']-1) * cos(2*(paramsRenew[,'anisoAngleRadians'])))
+aniso2 <-  unname(sqrt(paramsRenew[,'anisoRatio']-1) * sin(2*(paramsRenew[,'anisoAngleRadians'])))
+aniso <- cbind(aniso1, aniso2)
+sumLogRange <- log(paramsRenew[,'range']^2/paramsRenew[,'anisoRatio'])
+combinedRange <- sqrt(paramsRenew[,'range']^2/paramsRenew[,'anisoRatio'])
+paramsRenew <- cbind(paramsRenew, sumLogRange, combinedRange, aniso, sqrt(paramsRenew[,"nugget"]) * Table["sdSpatial",1])
+colnames(paramsRenew)[ncol(paramsRenew)] <- 'sdNugget'
+###################################################
+Spars = c("range",'sumLogRange',"combinedRange","nugget",'sdNugget',"shape",
+          'aniso1','aniso2','anisoRatio','anisoAngleRadians',"alpha")
+result = data.table::as.data.table(cbind(LogLikcpu, paramsRenew[,Spars]))
+profileLogLik <- result[, .(profile=max(.SD)), by=Spars]
+
+colAlpha = mapmisc::colourScale(profileLogLik$alpha, style='unique', breaks = 12, col=rainbow, opacity = 0.7)
+colAlpha$plot[which(is.na(colAlpha$plot))] = '#000000FF'
+
+profileLogLik[,'profile'] <- profileLogLik[,'profile'] - breaks
+profileLogLik <- profileLogLik[profile > maximum- breaks-10]  #maximum- breaks 
+profileLogLik <- as.data.frame(profileLogLik)
+```
+
+
+## get the colorful profile plots (continued)
+```{r range, fig.show='hold', out.width="49%", cache=TRUE}
+plot(profileLogLik$combinedRange, profileLogLik$profile-chisqValue, log='x',cex=.4, xlab="combinedRange",pch=16, ylab="profileLogL", col = colAlpha$plot)
+profileLogLik$sumLogRange <- 2*log(profileLogLik$combinedRange)
+newdata <- profileLogLik[,c('sumLogRange','profile')]
+colnames(newdata)[1]<-"x1"     
+datC2 = geometry::convhulln(newdata)
+allPoints = unique(as.vector(datC2))
+toTest = newdata[allPoints,]
+toTest[,'profile'] = toTest[,'profile'] + 0.1
+inHull = geometry::inhulln(datC2, as.matrix(toTest))
+toUse = newdata[allPoints,][!inHull,]
+toTest = newdata[allPoints,]
+toUse <- toUse[order(toUse$x1),]
+toUse <- head(toUse, - 1)
+
+interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse),  m=1, fx=TRUE), data=toUse)
+profsumLogRange = data.frame(x1=seq(min(toUse$x1), max(toUse$x1), len=1001))
+profsumLogRange$z = predict(interp1, profsumLogRange)
+
+points(exp(0.5*toTest[,1]), toTest[,2]-chisqValue, col='red', cex=0.6)
+points(exp(0.5*toUse[,1]), toUse[,2]-chisqValue, col='blue', cex=0.6, pch=3)
+lines(exp(0.5*profsumLogRange$x1), profsumLogRange$z-chisqValue, col = 'green')
+abline(h =-chisqValue, lty = 2, col='black')
+lower = min(newdata$x1)
+upper = max(newdata$x1)
+f1 <- approxfun(toUse[,1], toUse[,2])
+MLE <- sqrt(paramsRenew[index[1],'range']^2/paramsRenew[index[1],'anisoRatio'])
+ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
+abline(v =c(MLE,exp(0.5*ci)), lty = 2, col='black')
+
+
+
+## shape
+plot(profileLogLik$shape, profileLogLik$profile-chisqValue, cex=.2, xlab="shape", ylab="profileLogL",  log='x', col = colAlpha$plot)
+profileLogLik$logshape <- log(profileLogLik$shape)
+newdata <- profileLogLik[,c('logshape','profile')]
+colnames(newdata)[1]<-"x1"
+
+datC2 = geometry::convhulln(newdata)
+allPoints = unique(as.vector(datC2))
+toTest = newdata[allPoints,]
+toTest[,'profile'] = toTest[,'profile'] + 0.1
+inHull = geometry::inhulln(datC2, as.matrix(toTest))
+toUse = newdata[allPoints,][!inHull,]
+toTest = newdata[allPoints,]
+toUse <- toUse[order(toUse$x1),]
+points(exp(toTest[,1]),toTest[,2]-chisqValue, col='red', cex=0.6)
+points(exp(toUse[,1]), toUse[,2]-chisqValue, col='blue', cex=0.6, pch=3)
+interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse),  m=1, fx=TRUE), data=toUse)
+profShapeLog = data.frame(x1=seq(min(toUse$x1), max(toUse$x1), len=1001))
+profShapeLog$z = predict(interp1, profShapeLog)
+
+lines(exp(profShapeLog$x1), profShapeLog$z-chisqValue, col = 'green')
+abline(h =-chisqValue, lty = 2, col='black') 
+f1 <- approxfun(toUse[,1], toUse[,2])
+
+lower = min(toUse$x1)
+upper = max(toUse$x1)
+MLE <- paramsRenew[index[1],'shape']
+ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
+abline(v =c(MLE,exp(ci)), lty = 2, col='black')
+
+
+## nugget
+plot(profileLogLik$nugget, profileLogLik$profile-chisqValue, cex=.2, xlab="nugget", ylab="profileLogL", col = colAlpha$plot)
+profileLogLik2 <- profileLogLik[,c('nugget','profile')]
+colnames(profileLogLik2) <- c("x1", 'profile')
+datC2 = geometry::convhulln(profileLogLik2)
+allPoints = unique(as.vector(datC2))
+toTest = profileLogLik2[allPoints,]
+toTest[,'profile'] = toTest[,'profile'] + 0.1
+inHull = geometry::inhulln(datC2, as.matrix(toTest))
+toUse = profileLogLik2[allPoints,][!inHull,]
+toTest = profileLogLik2[allPoints,]
+toUse <- toUse[order(toUse$x1),]
+points(toTest[,1], toTest[,2]-chisqValue, col='red', cex=0.6)
+points(toUse[,1], toUse[,2]-chisqValue, col='blue', cex=0.6, pch=3)
+
+interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse), m=1, fx=TRUE), data=toUse)
+profNugget = data.frame(x1=seq(min(toUse$x1), max(toUse$x1), len=1001))
+profNugget$z = predict(interp1, profNugget)
+lines(profNugget$x1, profNugget$z-chisqValue, col = 'green')
+abline(h =-chisqValue, lty = 2, col='black')
+
+lower = min(profileLogLik2$x1)
+upper = max(profileLogLik2$x1)
+f1 <- approxfun(toUse[,1], toUse[,2])
+MLE <- paramsRenew[index[1],'nugget']
+ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
+abline(v =c(MLE,ci), lty = 2,  col='black')
+
+
+## aniso1
+plot(profileLogLik$aniso1, profileLogLik$profile-chisqValue, cex=.2, xlab="aniso1", ylab="profileLogL", col = colAlpha$plot)
+profileLogLik2 <- profileLogLik[,c('aniso1','profile')]
+colnames(profileLogLik2) <- c("x1", 'profile')
+datC2 = geometry::convhulln(profileLogLik2)
+allPoints = unique(as.vector(datC2))
+toTest = profileLogLik2[allPoints,]
+toTest[,'profile'] = toTest[,'profile'] + 0.1
+inHull = geometry::inhulln(datC2, as.matrix(toTest))
+toUse = profileLogLik2[allPoints,][!inHull,]
+toTest = profileLogLik2[allPoints,]
+toUse <- toUse[order(toUse$x1),]
+toUse <- head(toUse, - 1)
+points(toTest[,1], toTest[,2]-chisqValue, col='red', cex=0.6)
+points(toUse[,1], toUse[,2]-chisqValue, col='blue', cex=0.6, pch=3)
+
+interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse), m=1, fx=TRUE), data=toUse)
+profaniso1 = data.frame(x1=seq(min(toUse$x1), max(toUse$x1), len=1001))
+profaniso1$z = predict(interp1, profaniso1)
+lines(profaniso1$x1, profaniso1$z-chisqValue, col = 'green')
+
+abline(h =-chisqValue, lty = 2, col='black')
+lower = min(profaniso1$x1)
+upper = max(profaniso1$x1)
+f1 <- approxfun(toUse[,1], toUse[,2])
+MLE <- sqrt(paramsRenew[index[1],'anisoRatio']-1) * cos(2*(paramsRenew[index[1],'anisoAngleRadians']))
+ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
+abline(v =c(MLE,ci), lty = 2, col='black')
+
+
+## aniso2
+plot(profileLogLik$aniso2, profileLogLik$profile-chisqValue, cex=.2, xlab="aniso2", ylab="profileLogL", col = colAlpha$plot)
+profileLogLik3 <- profileLogLik[,c('aniso2','profile')]
+colnames(profileLogLik3) <- c("x1", 'profile')
+datC2 = geometry::convhulln(profileLogLik3)
+allPoints = unique(as.vector(datC2))
+toTest = profileLogLik3[allPoints,]
+toTest[,'profile'] = toTest[,'profile'] + 0.1
+inHull = geometry::inhulln(datC2, as.matrix(toTest))
+toUse = profileLogLik3[allPoints,][!inHull,]
+toTest = profileLogLik3[allPoints,]
+toUse <- toUse[order(toUse$x1),]
+toUse <- head(toUse, - 1)
+points(toTest[,1], toTest[,2]-chisqValue, col='red', cex=0.6)
+points(toUse[,1], toUse[,2]-chisqValue, col='blue', cex=0.6, pch=3)
+
+interp1 = mgcv::gam(profile ~ s(x1, k=nrow(toUse), m=1, fx=TRUE), data=toUse)
+profaniso2 = data.frame(x1=seq(min(toUse$x1), max(toUse$x1), len=1001))
+profaniso2$z = predict(interp1, profaniso2)
+lines(profaniso2$x1, profaniso2$z-chisqValue, col = 'green')
+abline(h =-chisqValue, lty = 2, col='black')
+lower = min(profileLogLik3$x1)
+upper = max(profileLogLik3$x1)
+
+f1 <- approxfun(toUse[,1], toUse[,2])
+MLE <- sqrt(paramsRenew[index[1],'anisoRatio']-1) * sin(2*(paramsRenew[index[1],'anisoAngleRadians']))
+ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
+abline(v =c(MLE,ci), lty = 2, col='black')
+
+
+## boxcox
+likForboxcox = cbind(boxcox, apply(LogLikcpu, 2,  max) )
+f1 <- approxfun(likForboxcox[,1], likForboxcox[,2]-breaks)
+plot(likForboxcox[,1], likForboxcox[,2]-breaks-chisqValue, ylab= "proLogL", xlab='Box-Cox', cex=0.5)
+likForboxcox <- likForboxcox[order(likForboxcox[,1]),]
+lines(likForboxcox[,1], likForboxcox[,2]-breaks-chisqValue, col='blue')
+abline(h =-chisqValue, lty = 2)
+
+lower = min(boxcox)
+upper = max(boxcox)
+ci<-rootSolve::uniroot.all(f1, lower = lower, upper = upper)
+abline(v =c(boxcox[index[2]],ci), lty = 2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+# Do it step by step
+## get estimates for correlation parameters 
+```{r 1, eval=FALSE}
+result2<-gpuLik::prof1dCov(LogLik = result1$LogLik,  # cpu matrix
+                   XVYXVX = result1$XVYXVX,  # cpu matrix
+                   ssqResidual = result1$ssqResidual,  # cpu matrix
+                   paramToEstimate = c('range','combinedRange','shape', 
+                                       'nugget','aniso1', 'aniso2','boxcox'),
+                   cilevel=0.9, 
+                   params = result1$paramsRenew, 
+                   boxcox = result1$boxcox,  
+                   Ndata = result1$Ndata,
+                   Nobs = result1$Nobs,
+                   Ncov = result1$Ncov,
+                   reml = FALSE,
+                   predictors = result1$predictors,  # character string
+                   verbose=FALSE)
+
+# table of estimates
+result2$summary
+# index for the MLE parameter set
+result2$mleIndex
+
+```
+
+# get estimates and profile plots for betas'
+```{r beta_profile, eval=TRUE, out.width="49%", cache=TRUE}
+intercept<- sort(c(swissRes$summary['(Intercept)','estimate'], seq(0, 12, len=199)))
+elevation  <- sort(c(swissRes$summary['elevation','estimate'], seq(-7, 15, len=199)*1e-04))
+Betas <- cbind(intercept, elevation)
+
+output<-gpuLik::Prof1dBetas(Betas=Betas,
+                            cilevel=0.9,
+                            Nobs = result1$Nobs,
+                            Ndata = result1$Ndata,
+                            Nparam = result1$Nparam,
+                            Ncov = result1$Ncov,
+                            detVar = result1$detVar,
+                            result1$detReml,
+                            result1$ssqY,   
+                            result1$XVYXVX,   
+                            result1$jacobian,
+                            convexHull = FALSE)
+
+output$estimates
+output$breaks
+```
+
+
+
+# estimates and profile plots for sdSpatial
+```{r sdSpatial, eval=TRUE, cache=TRUE, fig.show='hide'}
+sdSpatial <- sort(c(seq(1.2, 5, len=39), swissRes$summary['sdSpatial','estimate']))
+provarresult <- gpuLik::profVariance(sdSpatial, 
+             cilevel=0.9,
+             result1$Nobs, 
+             result1$Ndata,
+             result1$Nparam,
+             result1$Ncov,
+             result1$detVar, 
+             result1$detReml, 
+             result1$ssqResidual, 
+             result1$jacobian)
+
+provarresult$estimates
+breaks <- provarresult$breaks
+
+temp <- qchisq(cilevel,  df = 1)/2
+LogLik <- provarresult$LogLik
+```
+
+```{r sdSpatial2, eval=TRUE, cache=TRUE}
+plot(sdSpatial,LogLik-breaks-temp, cex=0.6, ylab='profileLogL')
+lines(sdSpatial,LogLik-breaks-temp, col='blue')
+abline(h=-temp, lty = 2)
+
+abline(v=provarresult$estimates[c(1,2,3)], lty = 2)
+text(provarresult$estimates[1], -3.7, round(provarresult$estimates[1],digits = 2))
+text(provarresult$estimates[2], -3.7, round(provarresult$estimates[2],digits = 2))
+text(provarresult$estimates[3], -3.7, round(provarresult$estimates[3],digits = 2))
+```
+
+
+## 2D profile plots
+```{r 2dplotsprep, cache=TRUE}
+Spars = c("range",'sumLogRange',"combinedRange","nugget",'sdNugget',"shape",'aniso1','aniso2','anisoRatio','anisoAngleRadians',"alpha")
+result = data.table::as.data.table(cbind(LogLikcpu, paramsRenew[,Spars]))
+profileLogLik <- result[, .(profile=max(.SD)), by=Spars]
+head(profileLogLik)
+
+
+profileLogLik[,'profile'] <- profileLogLik[,'profile'] -maximum
+profileLogLik <- profileLogLik[profile > -10]  
+profileLogLik$logshape <- log(profileLogLik$shape)
+profileLogLik <- as.data.frame(profileLogLik)
+
+```
+
+
+```{r  sumLogRangenugget}
+profileLogL <- profileLogLik[,c('sumLogRange','nugget','profile')]
+datC2 = geometry::convhulln(profileLogL)
+allPoints2 = unique(as.vector(datC2))
+toTest2 = profileLogL[allPoints2,]
+toTest2[,'profile'] = toTest2[,'profile'] - 0.1
+inHull2 = geometry::inhulln(datC2, as.matrix(toTest2))
+toUse2 = profileLogL[allPoints2,][inHull2,]
+toTest2 = profileLogL[allPoints2,]
+
+Sprob = c(0, 0.1, 0.2, 0.5, 0.8, 0.95, 0.99, 0.999, 1) 
+Sbreaks =qchisq(Sprob, df=2)/2
+Sbreaks = pmin(Sbreaks, 1000)
+Sbreaks[1] = -10
+SbreaksC = rev(- Sbreaks)
+colDat2 = mapmisc::colourScale(profileLogL[,'profile'], style='fixed',
+                               breaks=SbreaksC, 
+                               col='Spectral', rev=TRUE)
+
+interp2 = mgcv::gam(profile ~ s(sumLogRange, nugget, k=16, m=3,fx=TRUE), data=toUse2)
+prof2list = list(sumLogRange=seq(15, 23, len=301),
+                 nugget=seq(0, 0.6, len=301))
+prof2 = do.call(expand.grid, prof2list)
+prof2$z = predict(interp2, prof2)
+
+col2 = mapmisc::colourScale(as.vector(prof2[,'z']), breaks=SbreaksC, col=colDat2$col, style='fixed')
+colPoints = mapmisc::colourScale(toUse2[,'profile'], breaks=SbreaksC, col=col2$col, style='fixed')
+
+
+plot(prof2[,c('sumLogRange','nugget')], col=col2$plot, pch=15)
+points(toUse2[,c('sumLogRange','nugget')], col='black', cex=0.8)
+mapmisc::legendBreaks('topright', breaks = rev(Sprob), col=colDat2$col)
+```
+
+
+```{r  rangevsshape}
+profileLogL <- profileLogLik[ , c('sumLogRange','logshape', 'shape',  'profile')]
+
+transFun = function(xx) xx^(-0.5)
+invTransFun = function(xx) xx^(-2)
+
+Sprob = c(0, 0.1, 0.2, 0.5, 0.8, 0.95, 0.99, 0.999, 1) 
+Sbreaks =qchisq(Sprob, df=2)/2
+Sbreaks = pmin(Sbreaks, 1000)
+Sbreaks[1] = -10
+SbreaksC = rev(-Sbreaks)
+colDat2 = mapmisc::colourScale(profileLogL[,'profile'], style='fixed',
+                               breaks=SbreaksC, 
+                               col='Spectral', rev=TRUE)
+
+Sshape = c(0.1, 1/4, 0.5, 1, 2, 5, 10, 100)
+
+profForChull = cbind(
+  sumLogRange = profileLogL$sumLogRange,
+  shapeTrans = transFun(profileLogL$shape),
+  profile=profileLogL$profile)
+
+
+theHull = geometry::convhulln(profForChull)
+toTest = profForChull[as.vector(theHull), ]
+toTest[,'profile'] = toTest[,'profile'] - 0.1
+inHull = geometry::inhulln(theHull, as.matrix(toTest))
+toUse = toTest[inHull,]
+toUse2 =  toUse[!duplicated(toUse[,c('sumLogRange','shapeTrans')]), ]
+
+
+if(TRUE) {
+  profForChullSub = profForChull[profileLogL$shape > 1 & profileLogL$shape < 8, ]
+  theHullSub = geometry::convhulln(profForChullSub)
+  toTestSub = profForChullSub[as.vector(theHullSub), ]
+  toTestSub[,'profile'] = toTestSub[,'profile'] - 0.1
+  inHullSub = geometry::inhulln(theHullSub, as.matrix(toTestSub))
+  toUseSub = toTestSub[inHullSub,]
+  toUse2 = rbind(toUse, toUseSub)
+  toUse2 = toUse2[!duplicated(toUse2[,c('sumLogRange','shapeTrans')]), ]
+}
+
+theGridList = list(sumLogRange = seq(15, 23.3, len=201),
+                   logshape = seq(-1.78, 4.6, len=201))
+theGrid = do.call(expand.grid, theGridList)
+
+theInterp = akima::interp(
+  toUse2[,'sumLogRange'], toUse2[,'shapeTrans'], toUse2[,'profile'],
+  theGridList$sumLogRange,
+  transFun(exp(theGridList$logshape)),
+  extrap=FALSE, linear=TRUE)
+
+
+col2 = mapmisc::colourScale(as.vector(theInterp$z), breaks=SbreaksC, col=colDat2$col, style='fixed')
+colPoints = mapmisc::colourScale(toUse2[,'profile'], breaks=SbreaksC, col=col2$col, style='fixed')
+
+plot(theGrid[,'sumLogRange'],theGrid[,'logshape'], col=col2$plot, pch=15, ylab='logshape', xlab='sumLogRange')
+points(toUse2[,'sumLogRange'], log(invTransFun(toUse2[, 'shapeTrans'])), cex=0.8)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
