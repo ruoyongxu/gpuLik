@@ -15,7 +15,7 @@ library('geostatsp')
 data("swissRain")
 swissRain = terra::unwrap(swissRain)
 swissAltitude = terra::unwrap(swissAltitude)
-swissRain$elevation = extract(swissAltitude, swissRain)
+swissRain$elevation = terra::extract(swissAltitude, swissRain, ID=FALSE)
 
 swissRes =  lgm( formula=rain~ elevation, 
                  data=swissRain, grid=20,
@@ -70,7 +70,7 @@ library(gpuLik)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 model_list <- list(swissRes, swissRes2,swissRes3,swissRes4,swissRes5,swissRes6)
-A <- gpuLik::configParams(Model = model_list, alpha=alpha1, alphasecond = alpha2,
+A <- configParams(Model = model_list, alpha=alpha1, alphasecond = alpha2,
                           data = terra::unwrap(swissDataWrap))
 paramsUse <- A$representativeParamaters
 b <- A$boxcox
@@ -94,12 +94,13 @@ result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          Betas = Betas,
                          sdSpatial = sdSpatial,
                          cilevel=0.9,  
+                         data = terra::unwrap(swissDataWrap), 
                          type = "double",
                          convexHullForBetas = FALSE,
-                         NparamPerIter=400,
+                         NparamPerIter=256,
                          Nglobal=c(128,64),
                          Nlocal=c(16,16),
-                         NlocalCache=2800,
+                         NlocalCache=2200,
                          verbose=c(0,0))
 ```
 

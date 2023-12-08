@@ -195,7 +195,7 @@ getHessianNolog <- function(Model,
   Params1 <- cbind(Paramset, otherParams)
   
   if(is.null(boxcox)){
-    boxcox = c(Model$parameters['boxcox'], Model$parameters['boxcox']-0.05, Model$parameters['boxcox']+0.05)
+    boxcox = c(Model$parameters['boxcox']-0.05, Model$parameters['boxcox'], Model$parameters['boxcox']+0.05)
   }
   
   
@@ -223,10 +223,17 @@ getHessianNolog <- function(Model,
   # }else if(length(result1$boxcox)==3){
   A <- result1$LogLik[-1, 1]
   Origin <- result1$LogLik[1, 1]  
-  boxcoxHessian <- unname((result1$LogLik[1, 3] - 2*result1$LogLik[1, 1] + result1$LogLik[1, 2])/(0.05^2))
-  # }
-  #plot(result$LogLik[])
   
+
+
+  boxcoxMle = which.max(result1$LogLik[1,])
+
+  if(boxcoxMle == 1 | boxcoxMle == ncol(result1$LogLik)) warning("boxcox MLE is first or last element")
+  boxcoxHessian <- unname(
+    (result1$LogLik[1, boxcoxMle-1] - 2*result1$LogLik[1, boxcoxMle] + result1$LogLik[1, boxcoxMle+1]
+     )/(diff(boxcox[c(boxcoxMle, boxcoxMle+1)])^2))
+
+
   HessianMat <- matrix(0, nrow=length(Mle), ncol=length(Mle))
   rownames(HessianMat) <- names(MleGamma)
   colnames(HessianMat) <- names(MleGamma)
@@ -301,9 +308,7 @@ getHessianNolog <- function(Model,
     c(0.01, 0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9, 0.99), 
     mean=Model$parameters['boxcox'], 
     sd = sqrt(abs(1/boxcoxHessian)))
-    # !!! was sqrt(solve(-boxcoxHessian)))
-    # but boxcoxHessian is positive for soil example
-  
+
   
   output = list(HessianMat = HessianMat,
                 originalPoint = Mle,
@@ -568,7 +573,7 @@ configParams = function(Model,  # note that the model which does not fix any par
                         Mle = NULL,
                         boxcox = NULL,# a vector of confidence levels 1-alpha
                         shapeRestrict = 1000,
-                        data = Model$data,
+                        data = Model[[1]]$data,
                         coordinates = terra::crds(data)){
   
    if(is.null(alphasecond)){
@@ -598,6 +603,7 @@ configParams = function(Model,  # note that the model which does not fix any par
        restlist[i-1] = Model[i]
      }
      
+
      result = lapply(restlist, configParamsSingle,
                      alpha = alphasecond, 
                      Mle = Mle,
