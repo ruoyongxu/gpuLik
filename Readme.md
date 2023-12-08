@@ -1,6 +1,6 @@
 # gpuLik
 
-Software for creating profile likelihoods and likelihood-based confidence intervals for parameters in Gaussian spatial models with Mat\'ern family of correlation functions, including anisotropic models.
+Software for creating profile likelihoods and likelihood-based confidence intervals for parameters in Gaussian spatial models with Mat\'ern family of correlation functions, including anisotropic models, taking advantage of GPU parallel accerlation in computation.
 
 
 ## Authors
