@@ -87,6 +87,7 @@ sdSpatial <- c(seq(1.2, 5, len=199), swissRes$summary['sdSpatial','estimate'])
 ```{r onestep, cache=TRUE, eval=TRUE, message=FALSE, fig.show='hide'}
 result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          params=paramsUse, 
+                         data = terra::unwrap(swissDataWrap), 
                          paramToEstimate=c('range','combinedRange','shape','nugget', 
                                            'aniso1', 'aniso2',"anisoRatio", 
                                            "anisoAngleRadians",'boxcox'),
@@ -94,7 +95,6 @@ result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          Betas = Betas,
                          sdSpatial = sdSpatial,
                          cilevel=0.9,  
-                         data = terra::unwrap(swissDataWrap), 
                          type = "double",
                          convexHullForBetas = FALSE,
                          NparamPerIter=256,
@@ -116,20 +116,19 @@ max(result3$LogLik)
 
 ## Or get the profie loglikelihoods step by step
 ```{r getProfLogL, cache=TRUE, message=FALSE, results='hide'}
-result1 <- gpuLik::getProfLogL(data=swissRain,
-                                formula=rain~ elevation,
-                                coordinates=swissRain@coords,
-                                params=paramsUse, 
-                                boxcox = seq(b[1],b[9],len=33),
-                                type = "double",
-                                data = terra::unwrap(swissDataWrap), 
-                                NparamPerIter=200,
-                                gpuElementsOnly = FALSE,
-                                reml=FALSE, 
-                                Nglobal=c(128,128),
-                                Nlocal=c(16,16),
-                                NlocalCache=2200,
-                                verbose=c(0,0))
+result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap), 
+                               formula=rain~ elevation,
+                               coordinates=terra::crds(swissRain),
+                               params=paramsUse, 
+                               boxcox = seq(b[1],b[9],len=33),
+                               type = "double",
+                               NparamPerIter=128,
+                               gpuElementsOnly = FALSE,
+                               reml=FALSE, 
+                               Nglobal=c(64,64),
+                               Nlocal=c(16,8),
+                               NlocalCache=1000,
+                               verbose=c(0,0))
 ```
 ```{r getproflogL2, cache=TRUE}
 # indices of parameter sets that leads to NaN or infinity in Loglikelihood 
