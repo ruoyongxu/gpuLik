@@ -1,8 +1,9 @@
 ---
 title: "swissrain data code"
 author: "ruoyong"
-date: '2022-05-06'
+date: "2022-05-06"
 output:
+  pdf_document: default
   html_document: default
 ---
 
@@ -66,6 +67,8 @@ swissDataWrap = terra::wrap(swissRes$data)
 ## R Markdown
 ## Set the parameters
 ```{r config, message=FALSE, results='hide', cache=FALSE}
+library('gpuR')
+setContext(grep("gpu", listContexts()$device_type)[1])
 library(gpuLik)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
@@ -76,7 +79,7 @@ paramsUse <- A$representativeParamaters
 b <- A$boxcox
 ```
 
-```{r config2,message=FALSE,results='hide', cache=TRUE}
+```{r config2,message=FALSE,results='hide', cache=FALSE}
 intercept<- sort(c(swissRes$summary['(Intercept)','estimate'], seq(0, 12, len=199)))
 cov1  <- sort(c(swissRes$summary['elevation','estimate'], seq(-7, 15, len=199)*1e-04))
 Betas <- cbind(intercept, cov1)
@@ -84,7 +87,7 @@ sdSpatial <- c(seq(1.2, 5, len=199), swissRes$summary['sdSpatial','estimate'])
 ```
 
 ## Get the profie loglikelihoods and estimates for all model parameters 
-```{r onestep, cache=TRUE, eval=TRUE, message=FALSE, fig.show='hide'}
+```{r onestep, cache=FALSE, eval=TRUE, message=FALSE, fig.show='hide'}
 result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          params=paramsUse, 
                          data = terra::unwrap(swissDataWrap), 
@@ -97,14 +100,14 @@ result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          cilevel=0.9,  
                          type = "double",
                          convexHullForBetas = FALSE,
-                         NparamPerIter=256,
-                         Nglobal=c(128,64),
-                         Nlocal=c(16,16),
-                         NlocalCache=2200,
-                         verbose=c(0,0))
+                         NparamPerIter=64,
+                         Nglobal=c(64,64),
+                         Nlocal=c(8,8),
+                         NlocalCache=2000,
+                         verbose=c(5,5))
 ```
 
-```{r allestimates, cache=TRUE}
+```{r allestimates, cache=FALSE}
 # total parameter configurations for \omega
 nrow(paramsUse)
 result3$summary
@@ -115,7 +118,7 @@ max(result3$LogLik)
 ```
 
 ## Or get the profie loglikelihoods step by step
-```{r getProfLogL, cache=TRUE, message=FALSE, results='hide'}
+```{r getProfLogL, cache=FALSE, message=FALSE, results='hide'}
 result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap), 
                                formula=rain~ elevation,
                                coordinates=terra::crds(swissRain),
@@ -127,7 +130,7 @@ result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap),
                                reml=FALSE, 
                                Nglobal=c(64,64),
                                Nlocal=c(16,8),
-                               NlocalCache=1000,
+                               NlocalCache=2000,
                                verbose=c(0,0))
 ```
 ```{r getproflogL2, cache=TRUE}
