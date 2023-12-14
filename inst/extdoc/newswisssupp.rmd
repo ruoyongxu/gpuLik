@@ -79,7 +79,7 @@ paramsUse <- A$representativeParamaters
 b <- A$boxcox
 ```
 
-```{r config2,message=FALSE,results='hide', cache=TRUE}
+```{r config2,message=FALSE,results='hide', cache=FALSE}
 intercept<- sort(c(swissRes$summary['(Intercept)','estimate'], seq(0, 12, len=199)))
 cov1  <- sort(c(swissRes$summary['elevation','estimate'], seq(-7, 15, len=199)*1e-04))
 Betas <- cbind(intercept, cov1)
@@ -104,10 +104,10 @@ result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          Nglobal=c(64,64),
                          Nlocal=c(8,8),
                          NlocalCache=2000,
-                         verbose=c(0,0))
+                         verbose=c(5,5))
 ```
 
-```{r allestimates, cache=TRUE}
+```{r allestimates, cache=FALSE}
 # total parameter configurations for \omega
 nrow(paramsUse)
 result3$summary
@@ -118,7 +118,7 @@ max(result3$LogLik)
 ```
 
 ## Or get the profie loglikelihoods step by step
-```{r getProfLogL, cache=TRUE, message=FALSE, results='hide'}
+```{r getProfLogL, cache=FALSE, message=FALSE, results='hide'}
 result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap), 
                                formula=rain~ elevation,
                                coordinates=terra::crds(swissRain),
@@ -130,7 +130,7 @@ result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap),
                                reml=FALSE, 
                                Nglobal=c(64,64),
                                Nlocal=c(16,8),
-                               NlocalCache=1000,
+                               NlocalCache=2000,
                                verbose=c(0,0))
 ```
 ```{r getproflogL2, cache=TRUE}

@@ -16,7 +16,6 @@ getProfLogL <- function(data,
                         NlocalCache,
                         verbose=c(1,0)){
   
-  
   # verbose[2]>=2 then information for each kernel process in each loop
   # verbose[1]>=3 matern chol kernel string
   # verbose[1]>=2 loop information
@@ -90,7 +89,7 @@ getProfLogL <- function(data,
   cholXVXdiag = vclMatrix(0, NparamPerIter, Ncov, type=type)
   minusTwoLogLik <- vclMatrix(0, Nparam, Ndata, type=type)
   
-  
+
   gpuLik:::likfitGpu_BackendP(
     yx,        #1
     coordsGpu, #2
@@ -114,7 +113,7 @@ getProfLogL <- function(data,
     cholXVXdiag, #20
     varMat,        #21     Vbatch
     cholDiagMat)
-  
+
   # resid^T V^(-1) resid, resid = Y - X betahat = ssqResidual
   ssqResidual <- ssqY - ssqBetahat
   
@@ -971,7 +970,6 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                          Nlocal,
                          NlocalCache,
                          verbose=c(1,0)){
-  
   if(is.list(unlist(model[[1]]))){
   model_1 = model[[1]]
   }else{
@@ -1009,8 +1007,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
   if(!is.null(params) & is.null(boxcox)){
     stop("require boxcox values")
   }
-  
-  
+
   result1 <- getProfLogL(data=data,
                          formula=formula, 
                          coordinates=coordinates,
@@ -1023,7 +1020,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                          Nglobal, 
                          Nlocal, 
                          NlocalCache, 
-                         verbose=c(0,0))
+                         verbose=verbose)
 
 
   if(is.null(Betas)| is.null(sdSpatial)){
@@ -1054,8 +1051,6 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                        predictors = result1$predictors,
                        verbose=verbose)
   
-  
-  
      betasOutput<-gpuLik::Prof1dBetas(Betas=Betas, 
                                       cilevel=cilevel,  
                                       result1$Nobs,  
@@ -1069,8 +1064,6 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                                       result1$jacobian,
                                       reml = reml,
                                       convexHull = convexHullForBetas)
-  
-  
   
   varianceOutput <- gpuLik::profVariance(sdSpatial, 
                                          cilevel=cilevel,
