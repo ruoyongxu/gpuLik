@@ -1,7 +1,7 @@
 ---
 title: "swissrain data code"
 author: "ruoyong"
-date: "2022-05-06"
+date: "2023-12-14"
 output:
   pdf_document: default
   html_document: default
@@ -11,6 +11,9 @@ output:
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
 
+
+## R Markdown
+## Get MLE’s of parameters
 ```{r geostatsp, message=FALSE, cache=TRUE}
 library('geostatsp')
 data("swissRain")
@@ -64,8 +67,7 @@ swissRes$summary[,c('estimate','ci0.05', 'ci0.95')]
 swissDataWrap = terra::wrap(swissRes$data)
 ```
 
-## R Markdown
-## Set the parameters
+## Set the representative parameters 
 ```{r config, message=FALSE, results='hide', cache=FALSE}
 library('gpuR')
 setContext(grep("gpu", listContexts()$device_type)[1])
@@ -86,9 +88,10 @@ Betas <- cbind(intercept, cov1)
 sdSpatial <- c(seq(1.2, 5, len=199), swissRes$summary['sdSpatial','estimate'])
 ```
 
-## Get the profie loglikelihoods and estimates for all model parameters 
+## Get the profie loglikelihoods and estimates for all model parameters on GPU in one step,
+## change verbose argument if you would like to see backend code information
 ```{r onestep, cache=FALSE, eval=TRUE, message=FALSE, fig.show='hide'}
-result3<-gpuLik::likfitLgmGpu(model =swissRes,
+result<-gpuLik::likfitLgmGpu(model =swissRes,
                          params=paramsUse, 
                          data = terra::unwrap(swissDataWrap), 
                          paramToEstimate=c('range','combinedRange','shape','nugget', 
@@ -100,32 +103,34 @@ result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          cilevel=0.9,  
                          type = "double",
                          convexHullForBetas = FALSE,
-                         NparamPerIter=64,
+                         NparamPerIter=256,
                          Nglobal=c(64,64),
                          Nlocal=c(8,8),
                          NlocalCache=2000,
                          verbose=0)
 ```
 
+## Show the results
 ```{r allestimates, cache=FALSE}
 # total parameter configurations for \omega
 nrow(paramsUse)
-result3$summary
-result3$reml
-result3$Infindex 
+result$summary
+result$reml
+result$Infindex 
 swissRes$optim$logL
-max(result3$LogLik)
+max(result$LogLik)
 ```
 
-## Or get the profie loglikelihoods step by step
+## Alternatively, we can get the estimates step by step
+## Step 1, get the profie loglikelihoods for correlation and BoxCox parameters
 ```{r getProfLogL, cache=FALSE, message=FALSE, results='hide'}
-result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap), 
+result_1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap), 
                                formula=rain~ elevation,
                                coordinates=terra::crds(swissRain),
                                params=paramsUse, 
                                boxcox = seq(b[1],b[9],len=33),
                                type = "double",
-                               NparamPerIter=128,
+                               NparamPerIter=256,
                                gpuElementsOnly = FALSE,
                                reml=FALSE, 
                                Nglobal=c(64,64),
@@ -133,37 +138,40 @@ result1 <- gpuLik::getProfLogL(data = terra::unwrap(swissDataWrap),
                                NlocalCache=2000,
                                verbose=c(0,0))
 ```
+
+
+## Show some results
 ```{r getproflogL2, cache=TRUE}
 # indices of parameter sets that leads to NaN or infinity in Loglikelihood 
-result1$Infindex
+result_1$Infindex
 # total configurations for \lambda
-result1$Ndata
+result_1$Ndata
 # number of observations
-result1$Nobs
+result_1$Nobs
 # number of covariates in the model
-result1$Ncov
+result_1$Ncov
 # predictors in the model
-result1$predictors
+result_1$predictors
 ```
 
-## get the colorful profile plots
+## Get colorful profile likelihoods plots (setup)
 ```{r correlations}
-LogLikcpu = result1$LogLik  # cpu matrix
-XVYXVX = result1$XVYXVX  # cpu matrix
-ssqResidual = result1$ssqResidual  # cpu matrix
+LogLikcpu = result_1$LogLik  # cpu matrix
+XVYXVX = result_1$XVYXVX  # cpu matrix
+ssqResidual = result_1$ssqResidual  # cpu matrix
 paramToEstimate = c('range','combinedRange',"anisoRatio",
                     'shape','nugget', 'sdNugget', 
                     "anisoAngleRadians", 'aniso1', 
                     'aniso2','boxcox')
 cilevel=0.9  # decimal
-paramsRenew = result1$paramsRenew 
-params = result1$paramsRenew
-boxcox = result1$boxcox  
-Ndata = result1$Ndata
-Nobs = result1$Nobs
-Ncov = result1$Ncov
+paramsRenew = result_1$paramsRenew 
+params = result_1$paramsRenew
+boxcox = result_1$boxcox  
+Ndata = result_1$Ndata
+Nobs = result_1$Nobs
+Ncov = result_1$Ncov
 reml = FALSE
-predictors = result1$predictors
+predictors = result_1$predictors
 chisqValue <- qchisq(cilevel,  df = 1)/2
 Table <- matrix(NA, nrow=length(paramToEstimate) + Ncov + 1, ncol=3)
 rownames(Table) <-  c(predictors, "sdSpatial", paramToEstimate)
@@ -201,7 +209,7 @@ profileLogLik <- as.data.frame(profileLogLik)
 ```
 
 
-## get the colorful profile plots (continued)
+## Get the colorful profile plots for covariance and BoxCox parameters
 ```{r range, fig.show='hold', out.width="49%", cache=TRUE}
 plot(profileLogLik$combinedRange, profileLogLik$profile-chisqValue, log='x',cex=.4, xlab="combinedRange",pch=16, ylab="profileLogL", col = colAlpha$plot)
 profileLogLik$sumLogRange <- 2*log(profileLogLik$combinedRange)
@@ -371,40 +379,30 @@ abline(v =c(boxcox[index[2]],ci), lty = 2)
 
 
 
-
-
-
-
-
-
-
-
-# Do it step by step
-## get estimates for correlation parameters 
+## Step 2, get estimates for correlation parameters only
 ```{r 1, eval=FALSE}
-result2<-gpuLik::prof1dCov(LogLik = result1$LogLik,  # cpu matrix
-                   XVYXVX = result1$XVYXVX,  # cpu matrix
-                   ssqResidual = result1$ssqResidual,  # cpu matrix
+result_2<-gpuLik::prof1dCov(LogLik = result_1$LogLik,  # cpu matrix
+                   XVYXVX = result_1$XVYXVX,  # cpu matrix
+                   ssqResidual = result_1$ssqResidual,  # cpu matrix
                    paramToEstimate = c('range','combinedRange','shape', 
                                        'nugget','aniso1', 'aniso2','boxcox'),
                    cilevel=0.9, 
-                   params = result1$paramsRenew, 
-                   boxcox = result1$boxcox,  
-                   Ndata = result1$Ndata,
-                   Nobs = result1$Nobs,
-                   Ncov = result1$Ncov,
+                   params = result_1$paramsRenew, 
+                   boxcox = result_1$boxcox,  
+                   Ndata = result_1$Ndata,
+                   Nobs = result_1$Nobs,
+                   Ncov = result_1$Ncov,
                    reml = FALSE,
-                   predictors = result1$predictors,  # character string
+                   predictors = result_1$predictors,  # character string
                    verbose=FALSE)
 
 # table of estimates
-result2$summary
+result_2$summary
 # index for the MLE parameter set
-result2$mleIndex
-
+result_2$mleIndex
 ```
 
-# get estimates and profile plots for betas'
+## Step 3, get estimates and profile plots for betas'
 ```{r beta_profile, eval=TRUE, out.width="49%", cache=TRUE}
 intercept<- sort(c(swissRes$summary['(Intercept)','estimate'], seq(0, 12, len=199)))
 elevation  <- sort(c(swissRes$summary['elevation','estimate'], seq(-7, 15, len=199)*1e-04))
@@ -412,15 +410,15 @@ Betas <- cbind(intercept, elevation)
 
 output<-gpuLik::Prof1dBetas(Betas=Betas,
                             cilevel=0.9,
-                            Nobs = result1$Nobs,
-                            Ndata = result1$Ndata,
-                            Nparam = result1$Nparam,
-                            Ncov = result1$Ncov,
-                            detVar = result1$detVar,
-                            result1$detReml,
-                            result1$ssqY,   
-                            result1$XVYXVX,   
-                            result1$jacobian,
+                            Nobs = result_1$Nobs,
+                            Ndata = result_1$Ndata,
+                            Nparam = result_1$Nparam,
+                            Ncov = result_1$Ncov,
+                            detVar = result_1$detVar,
+                            result_1$detReml,
+                            result_1$ssqY,   
+                            result_1$XVYXVX,   
+                            result_1$jacobian,
                             convexHull = FALSE)
 
 output$estimates
@@ -429,19 +427,19 @@ output$breaks
 
 
 
-# estimates and profile plots for sdSpatial
+## Step 4, get stimates and profile plots for variance parameter
 ```{r sdSpatial, eval=TRUE, cache=TRUE, fig.show='hide'}
 sdSpatial <- sort(c(seq(1.2, 5, len=39), swissRes$summary['sdSpatial','estimate']))
 provarresult <- gpuLik::profVariance(sdSpatial, 
              cilevel=0.9,
-             result1$Nobs, 
-             result1$Ndata,
-             result1$Nparam,
-             result1$Ncov,
-             result1$detVar, 
-             result1$detReml, 
-             result1$ssqResidual, 
-             result1$jacobian)
+             result_1$Nobs, 
+             result_1$Ndata,
+             result_1$Nparam,
+             result_1$Ncov,
+             result_1$detVar, 
+             result_1$detReml, 
+             result_1$ssqResidual, 
+             result_1$jacobian)
 
 provarresult$estimates
 breaks <- provarresult$breaks
@@ -462,7 +460,7 @@ text(provarresult$estimates[3], -3.7, round(provarresult$estimates[3],digits = 2
 ```
 
 
-## 2D profile plots
+## Show some 2-dimensional profile plots (setup)
 ```{r 2dplotsprep, cache=TRUE}
 Spars = c("range",'sumLogRange',"combinedRange","nugget",'sdNugget',"shape",'aniso1','aniso2','anisoRatio','anisoAngleRadians',"alpha")
 result = data.table::as.data.table(cbind(LogLikcpu, paramsRenew[,Spars]))
@@ -478,6 +476,7 @@ profileLogLik <- as.data.frame(profileLogLik)
 ```
 
 
+# 2-dimensional profile plot of sumLogRange vs nugget
 ```{r  sumLogRangenugget}
 profileLogL <- profileLogLik[,c('sumLogRange','nugget','profile')]
 datC2 = geometry::convhulln(profileLogL)
@@ -512,7 +511,7 @@ points(toUse2[,c('sumLogRange','nugget')], col='black', cex=0.8)
 mapmisc::legendBreaks('topright', breaks = rev(Sprob), col=colDat2$col)
 ```
 
-
+## 2-dimensional profile plot of sumLogRange vs shape
 ```{r  rangevsshape}
 profileLogL <- profileLogLik[ , c('sumLogRange','logshape', 'shape',  'profile')]
 
