@@ -1,8 +1,9 @@
 ---
 title: "swissrain data code"
 author: "ruoyong"
-date: '2022-05-06'
+date: "2022-05-06"
 output:
+  pdf_document: default
   html_document: default
 ---
 
@@ -66,6 +67,8 @@ swissDataWrap = terra::wrap(swissRes$data)
 ## R Markdown
 ## Set the parameters
 ```{r config, message=FALSE, results='hide', cache=FALSE}
+library('gpuR')
+setContext(grep("gpu", listContexts()$device_type)[1])
 library(gpuLik)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
@@ -84,7 +87,7 @@ sdSpatial <- c(seq(1.2, 5, len=199), swissRes$summary['sdSpatial','estimate'])
 ```
 
 ## Get the profie loglikelihoods and estimates for all model parameters 
-```{r onestep, cache=TRUE, eval=TRUE, message=FALSE, fig.show='hide'}
+```{r onestep, cache=FALSE, eval=TRUE, message=FALSE, fig.show='hide'}
 result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          params=paramsUse, 
                          data = terra::unwrap(swissDataWrap), 
@@ -98,9 +101,9 @@ result3<-gpuLik::likfitLgmGpu(model =swissRes,
                          type = "double",
                          convexHullForBetas = FALSE,
                          NparamPerIter=256,
-                         Nglobal=c(128,64),
-                         Nlocal=c(16,16),
-                         NlocalCache=2200,
+                         Nglobal=c(64,64),
+                         Nlocal=c(8,8),
+                         NlocalCache=2000,
                          verbose=c(0,0))
 ```
 
