@@ -18,7 +18,7 @@ theCache = paste0(theCache, '/')
 knitr::opts_chunk$set(cache.path = theCache)
 ```
 
-```{r theData}
+```{r theData, cache=TRUE}
 library('terra')
 load("hgmTerra.RData")
 hgm = unwrap(hgmWrap)
@@ -30,7 +30,7 @@ data('worldMap', package='mapmisc')
 worldMap = project(unwrap(worldMap), mapmisc::crsLL)
 ```
 
-```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE}
+```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE, cache=TRUE}
 mapmisc::map.new(hgm)
 plot(myBgMap, add=TRUE)
 plot(hgm, add=TRUE, cex=0.3)
