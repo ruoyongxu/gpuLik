@@ -280,11 +280,13 @@ ParamsFromLgm <- function(modelSummary,      #lgm model
   }
   
   
-  
+  if(is.na(modelSummary['sdSpatial','ci0.005'])){
+    stop('users must configure values of sdSpatial')
+  }else{
   sdSpatial <- sort(
     c( modelSummary['sdSpatial','estimate'], seq(modelSummary['sdSpatial','ci0.005']*sdSpatialleft,  modelSummary['sdSpatial','ci0.995']*sdSpatialright, len=59))
   ) 
-  
+  }
   
   output = list(Betas = Betas,
                 sdSpatial = sdSpatial)
@@ -1026,7 +1028,7 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
   if(is.null(Betas)| is.null(sdSpatial)){
     #stop('Betas matrix missing')
     OutputBs <- ParamsFromLgm(modelSummary = model_1$summary,      #lgm model
-                              covariates = result1$predictors)        # a string vector
+                              covariates = strtrim(result1$predictors, width = 25)) #result1$predictors)        # a string vector
     
     if(is.null(Betas))
     Betas <- OutputBs$Betas
@@ -1051,6 +1053,8 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                        predictors = result1$predictors,
                        verbose=verbose)
   
+  finalTable <- correlationOutput$summary
+     
      betasOutput<-gpuLik::Prof1dBetas(Betas=Betas, 
                                       cilevel=cilevel,  
                                       result1$Nobs,  
@@ -1064,7 +1068,11 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                                       result1$jacobian,
                                       reml = reml,
                                       convexHull = convexHullForBetas)
-  
+     
+  if (is.null(sdSpatial)){
+    warning('sdSpatial values not configured.')
+    finalTable[1:(nrow(betasOutput$estimates)),]<-betasOutput$estimates[,c(1:3)]
+  }else{
   varianceOutput <- gpuLik::profVariance(sdSpatial, 
                                          cilevel=cilevel,
                                          Nobs = result1$Nobs,
@@ -1077,8 +1085,11 @@ likfitLgmGpu <- function(model,  # can be a list, note that the model which does
                                          jacobian = result1$jacobian,
                                          reml = reml)
   
-  finalTable <- correlationOutput$summary
   finalTable[1:(nrow(betasOutput$estimates)+1),]<-rbind(betasOutput$estimates[,c(1:3)],varianceOutput$estimates[,c(1:3)])
+  }
+     
+
+  
   
   if(is.null(params)){
     Output <- list(summary = finalTable,
