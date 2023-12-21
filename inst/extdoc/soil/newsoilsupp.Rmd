@@ -133,21 +133,21 @@ intercept<- sort(c(hgRes$summary['(Intercept)','estimate'],seq(-10, -4, len=199)
 #2
 elevation  <- sort(c(hgRes$summary['elevation','estimate'], seq(-3,  8, len=199))*1e-04)
 #3
-landMosaic_cropland <- sort(c(hgRes$summary['landMosaic cropland / vegetation','estimate'],seq(-0.5,  0.5, len=199)))  
+landMosaic_cropland <- sort(c(hgRes$summary['landMosaic cropland / veg','estimate'],seq(-0.5,  0.5, len=199)))  
 #4
-landMosaic_vegetation <- sort(c(hgRes$summary['landMosaic vegetation / cropland','estimate'],seq(-1.2,  0.1, len=199))) 
+landMosaic_vegetation <- sort(c(hgRes$summary['landMosaic vegetation / c','estimate'],seq(-1.2,  0.1, len=199))) 
 #5
-landbroadleaved_deciduous_forest <- sort(c(hgRes$summary['landbroadleaved deciduous forest','estimate'],seq(-0.9,  0.6, len=199)))
+landbroadleaved_deciduous_forest <- sort(c(hgRes$summary['landbroadleaved deciduous','estimate'],seq(-0.9,  0.6, len=199)))
 #6
-landneedleleaved_evergreen_forest <- sort(c(hgRes$summary['landneedleleaved evergreen forest','estimate'], seq(-0.7, 0.9, len=199))) 
+landneedleleaved_evergreen_forest <- sort(c(hgRes$summary['landneedleleaved evergree','estimate'], seq(-0.7, 0.9, len=199))) 
 #7
-landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(hgRes$summary['landOpen needleleaved deciduous or evergreen forest','estimate'],seq(-1.7,  0, len=199)))  
+landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(hgRes$summary['landOpen needleleaved dec','estimate'],seq(-1.7,  0, len=199)))  
 #8
-landmixed_broadleaved_and_needleleaved_forest <- sort(c(hgRes$summary['landmixed broadleaved and needleleaved forest','estimate'],seq(-10.5e-01, -0.1e-01, len=199))) 
+landmixed_broadleaved_and_needleleaved_forest <- sort(c(hgRes$summary['landmixed broadleaved and','estimate'],seq(-10.5e-01, -0.1e-01, len=199))) 
 #9
-landMosaic_forest_or_shrubland <- sort(c(hgRes$summary['landMosaic forest or shrubland / grassland','estimate'], seq(-0.98, 0.5, len=199))) 
+landMosaic_forest_or_shrubland <- sort(c(hgRes$summary['landMosaic forest or shru','estimate'], seq(-0.98, 0.5, len=199))) 
 #10
-landMosaic_grassland <- sort(c(hgRes$summary['landMosaic grassland / forest or shrubland','estimate'],seq(-0.7,  0.5, len=199))) 
+landMosaic_grassland <- sort(c(hgRes$summary['landMosaic grassland / fo','estimate'],seq(-0.7,  0.5, len=199))) 
 #11
 landshrubland <- sort(c(hgRes$summary['landshrubland','estimate'], seq(-0.6, 1.1, len=199))) 
 #12
@@ -155,9 +155,9 @@ landherbaceous_vegetation  <- sort(c(hgRes$summary['landherbaceous vegetation','
 #13
 landSparse_vegetation <- sort(c(hgRes$summary['landSparse vegetation','estimate'],seq(-2.5, 0.1, len=199))) 
 #14
-landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody vegetation on regularly flooded or waterlogged soil','estimate'], seq(-1.9, 0.4, len=199))) 
+landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody ve','estimate'], seq(-1.9, 0.4, len=199))) 
 #15
-landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces and associated areas','estimate'], seq(-2.6, 1.6, len=199)))
+landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces a','estimate'], seq(-2.6, 1.6, len=199)))
 #16
 landWater_bodies <- sort(c(hgRes$summary['landWater bodies','estimate'], seq(-5, 3, len=199)))  
 #17
