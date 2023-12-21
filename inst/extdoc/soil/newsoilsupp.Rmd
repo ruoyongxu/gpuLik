@@ -19,7 +19,7 @@ theCache = paste0(theCache, '/')
 knitr::opts_chunk$set(cache.path = theCache)
 ```
 
-```{r theData, cache=FALSE}
+```{r theData, cache=TRUE}
 library('terra')
 load("hgmTerra.RData")
 hgm = unwrap(hgmWrap)
@@ -49,9 +49,9 @@ for(D in names(covList)) {
 par(oldpar)
 ```
 
-<<<<<<< Updated upstream
-=======
-```{r debugging, eval=FALSE, include=FALSE}
+
+
+```{r debugging, eval=TRUE}
 devtools::load_all("~/diseasemapping/pkg/geostatsp")
 formula = HG ~ elevation + land + night + evi
 data = hgm
@@ -63,7 +63,7 @@ stuff = gm.dataSpatial(
   formula, hgm, grid, covariates, buffer
 )
 ```
->>>>>>> Stashed changes
+
 
 
 ## Get the MLEs on CPU
@@ -96,6 +96,7 @@ hgRes4 = lgm(HG ~ elevation + land + night + evi, data = hgm,
 
 ## geostatsp's estmates
 ```{r mles}
+rownames(hgRes$summary) <- substr(rownames(hgRes$summary), 1, 25) 
 hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
 ```
 ```{r}
@@ -179,7 +180,7 @@ sdSpatial <- sort(c(seq(0.7, 2.8, len=59), hgRes$summary['sdSpatial','estimate']
 ```
 
 ## Get all estimates in a short-cut way (may take 20-25 minutes)
-```{r allestimates,  eval=TRUE,fig.show="hold", out.width="49%"}
+```{r allestimates,eval=TRUE}
 result3<-gpuLik::likfitLgmGpu(model=hgRes,
                               params=paramsUse, 
                               data = terra::unwrap(dataFromLgmWrap),
@@ -203,9 +204,11 @@ rownames(result3$summary) <- substr(rownames(result3$summary), 1, 25)
 
 ```{r}
 result3$summary
-result3$reml
 ```
 
+```{r}
+result3$reml
+```
 
 
 
