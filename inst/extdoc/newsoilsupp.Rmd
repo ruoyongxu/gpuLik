@@ -18,19 +18,24 @@ theCache = paste0(theCache, '/')
 knitr::opts_chunk$set(cache.path = theCache)
 ```
 
-```{r theData, cache=TRUE}
+```{r theData, cache=FALSE}
 library('terra')
 load("hgmTerra.RData")
 hgm = unwrap(hgmWrap)
+myBgMap = mapmisc::openmap(hgm, zoom=2)
+
+
 load("covListWrap.RData")
 covList = lapply(covListWrap, unwrap)
 names(covList) = gsub("Wrap", "", names(covList))
-myBgMap = mapmisc::openmap(hgm)
-data('worldMap', package='mapmisc')
-worldMap = project(unwrap(worldMap), mapmisc::crsLL)
+
+
+world1 = crop(vect(rnaturalearth::ne_countries(scale='medium', returnclass='sf')),
+              ext(-20, 100, 0, 85))
+worldMap = project(world1, mapmisc::crsLL)
 ```
 
-```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE, cache=TRUE}
+```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE, cache=FALSE}
 mapmisc::map.new(hgm)
 plot(myBgMap, add=TRUE)
 plot(hgm, add=TRUE, cex=0.3)
@@ -42,9 +47,24 @@ for(D in names(covList)) {
 }
 ```
 
+```{r debugging, eval=FALSE, include=FALSE}
+devtools::load_all("~/diseasemapping/diseasemapping/pkg/geostatsp")
+formula = HG ~ elevation + land + night + evi
+data = hgm
+grid = squareRaster( data, 20)
+covariates = covList
+buffer = 0
+
+stuff = gm.dataSpatial(
+  formula, hgm, grid, covariates, buffer
+)
+```
+
 
 ## Get the MLEs on CPU
 ```{r build lgm models, cache=TRUE, message=FALSE, results='hide'}
+hgm$land = extract(covList$land, project(hgm, crs(covList$land)))[,2]
+hgm$land = relevel(hgm$land, 'Rainfed croplands')
 library('geostatsp')
 hgRes = lgm(HG ~ elevation + land + night + evi, data = hgm,
             grid = 20, covariates = covList, fixBoxcox=FALSE, 
