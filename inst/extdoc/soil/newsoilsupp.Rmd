@@ -166,14 +166,19 @@ night <- sort(c(hgRes$summary['night','estimate'],seq(-0.5,  5, len=199))*1e-03)
 evi <- sort(c(hgRes$summary['evi','estimate'],seq(0,  5, len=199)))   
 
 
-Betas <- cbind(intercept, elevation, landbroadleaved_deciduous_forest, 
+Betas <- cbind(intercept, elevation, 
                landMosaic_cropland, 
-               landOpen_needleleaved_deciduous_or_evergreen_forest, 
-               landMosaic_grassland, landMosaic_vegetation,
-               landmixed_broadleaved_and_needleleaved_forest, landSparse_vegetation, 
-               landherbaceous_vegetation, landMosaic_forest_or_shrubland,
-               landneedleleaved_evergreen_forest, landshrubland, 
-               landgrassland_or_woody_vegetation, 
+               landMosaic_vegetation,
+               landbroadleaved_deciduous_forest,
+               landneedleleaved_evergreen_forest,
+               landOpen_needleleaved_deciduous_or_evergreen_forest,
+               landmixed_broadleaved_and_needleleaved_forest,
+               landMosaic_forest_or_shrubland,
+               landMosaic_grassland,
+               landshrubland,
+               landherbaceous_vegetation,
+               landSparse_vegetation,
+               landgrassland_or_woody_vegetation,
                landArtificial_surfaces_and_associated_areas,
                landWater_bodies, night, evi)
 sdSpatial <- sort(c(seq(0.7, 2.8, len=59), hgRes$summary['sdSpatial','estimate']))
