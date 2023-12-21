@@ -336,7 +336,7 @@ prof1dCov <- function(LogLik,  # cpu matrix
   
   maximum <- max(LogLik)
   breaks = maximum - qchisq(cilevel,  df = 1)/2
-  par(mfrow = c(1, 1))
+  #par(mfrow = c(1, 1))
   
   ############### profile for covariance parameters #####################
   aniso1 <-  unname(sqrt(params[,'anisoRatio']-1) * cos(2*(params[,'anisoAngleRadians'])))

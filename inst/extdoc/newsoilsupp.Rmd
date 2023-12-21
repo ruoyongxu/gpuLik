@@ -1,13 +1,14 @@
 ---
 title: "SoilMercury data example"
 author: "ruoyong"
-date: '2022-04-22'
+date: "2023-04-22"
 output:
+  pdf_document: default
   html_document: default
 ---
 
 ```{r setup, include=FALSE}
-par(cex.lab=1.2)
+par(cex.lab=1.5)
 
 theCache = file.path('cache',  
   substr(gsub("[[:punct:]]", "", 
@@ -48,6 +49,21 @@ for(D in names(covList)) {
 par(oldpar)
 ```
 
+<<<<<<< Updated upstream
+=======
+```{r debugging, eval=FALSE, include=FALSE}
+devtools::load_all("~/diseasemapping/pkg/geostatsp")
+formula = HG ~ elevation + land + night + evi
+data = hgm
+grid = squareRaster( data, 20)
+covariates = covList
+buffer = 0
+
+stuff = gm.dataSpatial(
+  formula, hgm, grid, covariates, buffer
+)
+```
+>>>>>>> Stashed changes
 
 
 ## Get the MLEs on CPU
@@ -78,14 +94,23 @@ hgRes4 = lgm(HG ~ elevation + land + night + evi, data = hgm,
 ```
 
 
+## geostatsp's estmates
+```{r mles}
+hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
+```
+```{r}
+hgRes$optim$logL
+```
+
+
 ## Configure the params
-```{r params_config, cache=TRUE, message=FALSE, results='hide'}
+```{r params_config,  message=FALSE, results='hide'}
 library(gpuLik)
 set.seed(66)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 
-model_list <- list(hgRes, hgRes2,hgRes3,hgRes4)
+model_list <- list(hgRes, hgRes2, hgRes3, hgRes4)
 A <- gpuLik::configParams(model_list, 
                           alpha=alpha1,
                           alphasecond = alpha2,
@@ -93,7 +118,6 @@ A <- gpuLik::configParams(model_list,
 
 paramsUse <- A$representativeParamaters[,1:5]
 b <- A$boxcox
-
 ```
 
 ## total number of correlation parameter sets
@@ -101,30 +125,88 @@ b <- A$boxcox
 nrow(paramsUse) 
 ```
 
+##
+```{r  config beta and sigma, cache=TRUE}
+#1
+intercept<- sort(c(hgRes$summary['(Intercept)','estimate'],seq(-10, -4, len=199)))
+#2
+elevation  <- sort(c(hgRes$summary['elevation','estimate'], seq(-3,  8, len=199))*1e-04)
+#3
+landMosaic_cropland <- sort(c(hgRes$summary['landMosaic cropland / vegetation','estimate'],seq(-0.5,  0.5, len=199)))  
+#4
+landMosaic_vegetation <- sort(c(hgRes$summary['landMosaic vegetation / cropland','estimate'],seq(-1.2,  0.1, len=199))) 
+#5
+landbroadleaved_deciduous_forest <- sort(c(hgRes$summary['landbroadleaved deciduous forest','estimate'],seq(-0.9,  0.6, len=199)))
+#6
+landneedleleaved_evergreen_forest <- sort(c(hgRes$summary['landneedleleaved evergreen forest','estimate'], seq(-0.7, 0.9, len=199))) 
+#7
+landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(hgRes$summary['landOpen needleleaved deciduous or evergreen forest','estimate'],seq(-1.7,  0, len=199)))  
+#8
+landmixed_broadleaved_and_needleleaved_forest <- sort(c(hgRes$summary['landmixed broadleaved and needleleaved forest','estimate'],seq(-10.5e-01, -0.1e-01, len=199))) 
+#9
+landMosaic_forest_or_shrubland <- sort(c(hgRes$summary['landMosaic forest or shrubland / grassland','estimate'], seq(-0.98, 0.5, len=199))) 
+#10
+landMosaic_grassland <- sort(c(hgRes$summary['landMosaic grassland / forest or shrubland','estimate'],seq(-0.7,  0.5, len=199))) 
+#11
+landshrubland <- sort(c(hgRes$summary['landshrubland','estimate'], seq(-0.6, 1.1, len=199))) 
+#12
+landherbaceous_vegetation  <- sort(c(hgRes$summary['landherbaceous vegetation','estimate'],seq(-0.8, 0.7, len=199)))
+#13
+landSparse_vegetation <- sort(c(hgRes$summary['landSparse vegetation','estimate'],seq(-2.5, 0.1, len=199))) 
+#14
+landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody vegetation on regularly flooded or waterlogged soil','estimate'], seq(-1.9, 0.4, len=199))) 
+#15
+landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces and associated areas','estimate'], seq(-2.6, 1.6, len=199)))
+#16
+landWater_bodies <- sort(c(hgRes$summary['landWater bodies','estimate'], seq(-5, 3, len=199)))  
+#17
+night <- sort(c(hgRes$summary['night','estimate'],seq(-0.5,  5, len=199))*1e-03) 
+#18
+evi <- sort(c(hgRes$summary['evi','estimate'],seq(0,  5, len=199)))   
 
+
+Betas <- cbind(intercept, elevation, landbroadleaved_deciduous_forest, 
+               landMosaic_cropland, 
+               landOpen_needleleaved_deciduous_or_evergreen_forest, 
+               landMosaic_grassland, landMosaic_vegetation,
+               landmixed_broadleaved_and_needleleaved_forest, landSparse_vegetation, 
+               landherbaceous_vegetation, landMosaic_forest_or_shrubland,
+               landneedleleaved_evergreen_forest, landshrubland, 
+               landgrassland_or_woody_vegetation, 
+               landArtificial_surfaces_and_associated_areas,
+               landWater_bodies, night, evi)
+sdSpatial <- sort(c(seq(0.7, 2.8, len=59), hgRes$summary['sdSpatial','estimate']))
+```
 
 ## Get all estimates in a short-cut way (may take 20-25 minutes)
-```{r allestimates, cache=TRUE,  eval=TRUE,fig.show="hold", out.width="49%"}
+```{r allestimates,  eval=TRUE,fig.show="hold", out.width="49%"}
 result3<-gpuLik::likfitLgmGpu(model=hgRes,
-          params=paramsUse, 
-          data = terra::unwrap(dataFromLgmWrap),
-          paramToEstimate=c('range','combinedRange',
-                            'sdNugget',
-                            'shape','nugget', 'aniso1', 
-                             'aniso2','boxcox'),
-         boxcox = seq(b[1],b[9],len=31),
-         cilevel=0.95,  # decimal
-         type = "double",
-         NparamPerIter=256,#400,
-         Nglobal=c(256,256),    
-         Nlocal=c(8, 8),#c(16,16),
-         NlocalCache=1600,#2800,
-         verbose=c(1,0))
+                              params=paramsUse, 
+                              data = terra::unwrap(dataFromLgmWrap),
+                              paramToEstimate=c('range','combinedRange',
+                                                'sdNugget',
+                                                'shape','nugget', 'aniso1', 
+                                                'aniso2','boxcox'),
+                              boxcox = seq(b[1],b[9],len=31),
+                              Betas = Betas,
+                              sdSpatial = sdSpatial,
+                              cilevel=0.95,  # decimal
+                              type = "double",
+                              NparamPerIter=256,#400,
+                              Nglobal=c(64,64),    
+                              Nlocal=c(16, 8),#c(16,16),
+                              NlocalCache=2000,#2800,
+                              verbose=c(1,0))
 
 rownames(result3$summary) <- substr(rownames(result3$summary), 1, 25) 
+```
+
+```{r}
 result3$summary
 result3$reml
 ```
+
+
 
 
 # Or, you can do it step by step, in the following way, showing only the codes here:
