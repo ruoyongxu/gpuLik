@@ -36,7 +36,7 @@ worldMap = project(world1, mapmisc::crsLL)
 ```
 
 ```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE, cache=FALSE}
-mapmisc::map.new(hgm)
+oldpar = mapmisc::map.new(hgm)
 plot(myBgMap, add=TRUE)
 plot(hgm, add=TRUE, cex=0.3)
 
@@ -45,20 +45,9 @@ for(D in names(covList)) {
   plot(covList[[D]], add=TRUE)
   plot(worldMap, add=TRUE)
 }
+par(oldpar)
 ```
 
-```{r debugging, eval=FALSE, include=FALSE}
-devtools::load_all("~/diseasemapping/diseasemapping/pkg/geostatsp")
-formula = HG ~ elevation + land + night + evi
-data = hgm
-grid = squareRaster( data, 20)
-covariates = covList
-buffer = 0
-
-stuff = gm.dataSpatial(
-  formula, hgm, grid, covariates, buffer
-)
-```
 
 
 ## Get the MLEs on CPU
@@ -73,12 +62,12 @@ hgRes = lgm(HG ~ elevation + land + night + evi, data = hgm,
 dataFromLgmWrap = wrap(hgRes$data)
 
 hgRes2 = lgm(HG ~ elevation + land + night + evi, data = hgm,
-            grid = 20, covariates = covList, shape=1, 
+            grid = 20, covariates = covList, shape=2, 
             fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
             reml=FALSE, aniso=TRUE)
 
 hgRes3 = lgm(HG ~ elevation + land + night + evi, data = hgm,
-             grid = 20, covariates = covList, shape=0.8, 
+             grid = 20, covariates = covList, shape=4, 
              fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
              reml=FALSE, aniso=TRUE)
 
