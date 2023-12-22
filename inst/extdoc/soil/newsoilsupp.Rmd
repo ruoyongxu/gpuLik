@@ -107,7 +107,7 @@ hgRes$optim$logL
 ## Configure the params
 ```{r params_config,  message=FALSE, results='hide'}
 library(gpuLik)
-set.seed(66)
+set.seed(55)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 
@@ -155,7 +155,7 @@ landherbaceous_vegetation  <- sort(c(hgRes$summary['landherbaceous vegetation','
 #13
 landSparse_vegetation <- sort(c(hgRes$summary['landSparse vegetation','estimate'],seq(-2.5, 0.1, len=199))) 
 #14
-landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody ve','estimate'], seq(-1.9, 0.4, len=199))) 
+landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody ve','estimate'], seq(-2, 0.4, len=199))) 
 #15
 landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces a','estimate'], seq(-2.6, 1.6, len=199)))
 #16
@@ -181,7 +181,7 @@ Betas <- cbind(intercept, elevation,
                landgrassland_or_woody_vegetation,
                landArtificial_surfaces_and_associated_areas,
                landWater_bodies, night, evi)
-sdSpatial <- sort(c(seq(0.7, 2.8, len=59), hgRes$summary['sdSpatial','estimate']))
+sdSpatial <- sort(c(seq(0.8, 3, len=59), hgRes$summary['sdSpatial','estimate']))
 ```
 
 ## Get all estimates in a short-cut way (may take 20-25 minutes)
@@ -229,9 +229,9 @@ result1 <- gpuLik::getProfLogL(data=unwrap(dataFromLgmWrap),
            NparamPerIter=256,
            gpuElementsOnly = FALSE,
            reml=FALSE, 
-           Nglobal=c(256,256),   
-           Nlocal=c(16,16),
-           NlocalCache=1600,
+           Nglobal=c(64,64),    
+           Nlocal=c(16, 8),
+           NlocalCache=2000,
            verbose=c(1,0))
 
 result1$Infindex
@@ -275,58 +275,6 @@ hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
 ```
 
 ## Or, get estimates for betas first, manually set the configuration
-```{r betascalar_M,eval=FALSE}
-#1
-intercept<- sort(c(-6.626632,seq(-10, -4, len=199)))
-#2
-elevation  <- sort(c(2.7,seq(-3,  8, len=199))*1e-04)
-#3
-landbroadleaved_deciduous_forest <- sort(c(-2.764583e-01,seq(-0.9,  0.4, len=199)))
-#4
-landMosaic_cropland <- sort(c(-8.473104e-02,seq(-0.5,  0.5, len=199)))  
-#5
-landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(-6.289483e-01,seq(-1.5,  -0, len=199)))  
-#6
-landMosaic_grassland <- sort(c(-8.093025e-02,seq(-0.7,  0.5, len=199))) 
-#7
-landMosaic_vegetation <- sort(c(-3.748334e-01,seq(-1,  0.1, len=199))) 
-#8
-landmixed_broadleaved_and_needleleaved_forest <- sort(c(-5.063632e-01,seq(-10.5e-01, -0.1e-01, len=199))) 
-#9
-landSparse_vegetation   <- sort(c(-1.019370e+00,seq(-1.8, 0.1, len=199)))    
-#10
-landherbaceous_vegetation  <- sort(c(4.877336e-03,seq(-0.8, 0.7, len=199)))  
-#11
-landMosaic_forest_or_shrubland <- sort(c(-2.842735e-01, seq(-0.98, 0.4, len=199)))  
-#12
-landneedleleaved_evergreen_forest <- sort(c(-8.919963e-03, seq(-0.7, 0.8, len=199)))  
-#13
-landshrubland <- sort(c(2.023893e-01, seq(-0.6, 0.95, len=199)))  
-#14
-landgrassland_or_woody_vegetation <- sort(c(-6.918658e-01, seq(-1.9, 0.4, len=199)))  
-#15
-landArtificial_surfaces_and_associated_areas  <- sort(c(-4.358506e-01, seq(-2.6, 1.6, len=199))) 
-#16
-landWater_bodies <- sort(c(-1.165791, seq(-5, 3, len=199)))   
-#17
-night <- sort(c(1.560504,seq(-0.5,  5, len=199))*1e-03) 
-#18
-evi <- sort(c(2.066869,seq(0,  5, len=199)))   
-
-
-Betas <- cbind(intercept, elevation, landbroadleaved_deciduous_forest, 
-               landMosaic_cropland, 
-               landOpen_needleleaved_deciduous_or_evergreen_forest, 
-               landMosaic_grassland, landMosaic_vegetation,
-               landmixed_broadleaved_and_needleleaved_forest, landSparse_vegetation, 
-               landherbaceous_vegetation, landMosaic_forest_or_shrubland,
-               landneedleleaved_evergreen_forest, landshrubland, 
-               landgrassland_or_woody_vegetation, 
-               landArtificial_surfaces_and_associated_areas,
-               landWater_bodies, night, evi)
-```
-
-## Or, automatically set the configuration
 ```{r betascalar_A, eval=FALSE}
 ConfigBetas<-gpuLik::ParamsFromLgm(hgRes$summary,      #lgm model
              covariates=result1$predictors)
