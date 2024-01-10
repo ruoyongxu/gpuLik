@@ -20,9 +20,9 @@ knitr::opts_chunk$set(cache.path = theCache)
 
 ```{r theData}
 library('terra')
-load("hgmTerra.RData")
+load("~/hgmTerra.RData")
 hgm = unwrap(hgmWrap)
-load("covListWrap.RData")
+load("~/covListWrap.RData")
 covList = lapply(covListWrap, unwrap)
 names(covList) = gsub("Wrap", "", names(covList))
 myBgMap = mapmisc::openmap(hgm)
@@ -46,9 +46,11 @@ for(D in names(covList)) {
 ## Get the MLEs on CPU
 ```{r build lgm models, cache=TRUE, message=FALSE, results='hide'}
 library('geostatsp')
-hgRes = lgm(HG ~ elevation + land + night + evi, data = hgm,
+hgRes = lgm(formula = HG ~ elevation + land + night + evi, 
+            data = hgm,
             grid = 20, covariates = covList, fixBoxcox=FALSE, 
-            fixShape=FALSE, fixNugget = FALSE,  
+            fixShape=FALSE,
+            fixNugget = FALSE,  
             reml=FALSE, aniso=TRUE)
 dataFromLgmWrap = wrap(hgRes$data)
 
@@ -68,10 +70,16 @@ hgRes4 = lgm(HG ~ elevation + land + night + evi, data = hgm,
              reml=FALSE, aniso=TRUE)
 ```
 
+```{r gpuStuff}
+library(gpuLik)
+knitr::kable(gpuR::listContexts())
+gpuR::setContext(grep("gpu", gpuR::listContexts()[,'device_type'])[1])
+t(gpuR::listContexts()[gpuR::currentContext(),])
+t(as.data.frame(gpuInfo()[c('deviceMemory','localMem')]))
+```
 
 ## Configure the params
 ```{r params_config, cache=TRUE, message=FALSE, results='hide'}
-library(gpuLik)
 set.seed(66)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
