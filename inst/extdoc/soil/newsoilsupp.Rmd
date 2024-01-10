@@ -1,0 +1,352 @@
+---
+title: "SoilMercury data example"
+author: "ruoyong"
+date: "2023-04-22"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+par(cex.lab=1.5)
+
+theCache = file.path('cache',  
+  substr(gsub("[[:punct:]]", "", 
+              paste(commandArgs(trailingOnly=FALSE), collapse='')), 
+         1, 20))
+theCache = paste0(theCache, '/')
+
+knitr::opts_chunk$set(cache.path = theCache)
+```
+
+```{r theData, cache=TRUE}
+library('terra')
+load("/hgmTerra.RData")
+hgm = unwrap(hgmWrap)
+myBgMap = mapmisc::openmap(hgm, zoom=2)
+
+load("/covListWrap.RData")
+covList = lapply(covListWrap, unwrap)
+names(covList) = gsub("Wrap", "", names(covList))
+
+
+world1 = crop(vect(rnaturalearth::ne_countries(scale='medium', returnclass='sf')),
+              ext(-20, 100, 0, 85))
+worldMap = project(world1, mapmisc::crsLL)
+```
+
+```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE, cache=FALSE}
+oldpar = mapmisc::map.new(hgm)
+plot(myBgMap, add=TRUE)
+plot(hgm, add=TRUE, cex=0.3)
+
+for(D in names(covList)) {
+  mapmisc::map.new(covList[[1]])
+  plot(covList[[D]], add=TRUE)
+  plot(worldMap, add=TRUE)
+}
+par(oldpar)
+```
+
+
+
+
+## Get the MLEs on CPU
+```{r build lgm models, cache=TRUE, message=FALSE, results='hide'}
+hgm$land = extract(covList$land, project(hgm, crs(covList$land)))[,2]
+hgm$land = relevel(hgm$land, 'Rainfed croplands')
+library('geostatsp')
+hgRes = lgm(formula = HG ~ elevation + land + night + evi, 
+            data = hgm,
+            grid = 20, covariates = covList, fixBoxcox=FALSE, 
+            fixShape=FALSE,
+            fixNugget = FALSE,  
+            reml=FALSE, aniso=TRUE)
+dataFromLgmWrap = wrap(hgRes$data)
+
+hgRes2 = lgm(HG ~ elevation + land + night + evi, data = hgm,
+            grid = 20, covariates = covList, shape=2, 
+            fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+            reml=FALSE, aniso=TRUE)
+
+hgRes3 = lgm(HG ~ elevation + land + night + evi, data = hgm,
+             grid = 20, covariates = covList, shape=4, 
+             fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+             reml=FALSE, aniso=TRUE)
+
+hgRes4 = lgm(HG ~ elevation + land + night + evi, data = hgm,
+             grid = 20, covariates = covList, shape=0.5, 
+             fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
+             reml=FALSE, aniso=TRUE)
+```
+
+```{r gpuStuff}
+library(gpuLik)
+knitr::kable(gpuR::listContexts())
+gpuR::setContext(grep("gpu", gpuR::listContexts()[,'device_type'])[1])
+t(gpuR::listContexts()[gpuR::currentContext(),])
+t(as.data.frame(gpuInfo()[c('deviceMemory','localMem')]))
+```
+
+## geostatsp's estmates
+```{r mles}
+rownames(hgRes$summary) <- substr(rownames(hgRes$summary), 1, 25) 
+hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
+```
+```{r}
+hgRes$optim$logL
+```
+
+
+## Configure the params
+<<<<<<< HEAD:inst/extdoc/newsoilsupp.Rmd
+```{r params_config, cache=TRUE, message=FALSE, results='hide'}
+set.seed(66)
+=======
+```{r params_config,  message=FALSE, results='hide'}
+library(gpuLik)
+set.seed(55)
+>>>>>>> 8c4ef13ab1591c65c6f381af2bbf93031d622b1b:inst/extdoc/soil/newsoilsupp.Rmd
+alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
+alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
+
+model_list <- list(hgRes, hgRes2, hgRes3, hgRes4)
+A <- gpuLik::configParams(model_list, 
+                          alpha=alpha1,
+                          alphasecond = alpha2,
+                          data = terra::unwrap(dataFromLgmWrap))
+
+paramsUse <- A$representativeParamaters[,1:5]
+b <- A$boxcox
+```
+
+## total number of correlation parameter sets
+```{r}
+nrow(paramsUse) 
+```
+
+##
+```{r  config beta and sigma, cache=TRUE}
+#1
+intercept<- sort(c(hgRes$summary['(Intercept)','estimate'],seq(-10, -4, len=199)))
+#2
+elevation  <- sort(c(hgRes$summary['elevation','estimate'], seq(-3,  8, len=199))*1e-04)
+#3
+landMosaic_cropland <- sort(c(hgRes$summary['landMosaic cropland / veg','estimate'],seq(-0.5,  0.5, len=199)))  
+#4
+landMosaic_vegetation <- sort(c(hgRes$summary['landMosaic vegetation / c','estimate'],seq(-1.2,  0.1, len=199))) 
+#5
+landbroadleaved_deciduous_forest <- sort(c(hgRes$summary['landbroadleaved deciduous','estimate'],seq(-0.9,  0.6, len=199)))
+#6
+landneedleleaved_evergreen_forest <- sort(c(hgRes$summary['landneedleleaved evergree','estimate'], seq(-0.7, 0.9, len=199))) 
+#7
+landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(hgRes$summary['landOpen needleleaved dec','estimate'],seq(-1.7,  0, len=199)))  
+#8
+landmixed_broadleaved_and_needleleaved_forest <- sort(c(hgRes$summary['landmixed broadleaved and','estimate'],seq(-10.5e-01, -0.1e-01, len=199))) 
+#9
+landMosaic_forest_or_shrubland <- sort(c(hgRes$summary['landMosaic forest or shru','estimate'], seq(-0.98, 0.5, len=199))) 
+#10
+landMosaic_grassland <- sort(c(hgRes$summary['landMosaic grassland / fo','estimate'],seq(-0.7,  0.5, len=199))) 
+#11
+landshrubland <- sort(c(hgRes$summary['landshrubland','estimate'], seq(-0.6, 1.1, len=199))) 
+#12
+landherbaceous_vegetation  <- sort(c(hgRes$summary['landherbaceous vegetation','estimate'],seq(-0.8, 0.7, len=199)))
+#13
+landSparse_vegetation <- sort(c(hgRes$summary['landSparse vegetation','estimate'],seq(-2.5, 0.1, len=199))) 
+#14
+landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody ve','estimate'], seq(-2, 0.4, len=199))) 
+#15
+landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces a','estimate'], seq(-2.6, 1.6, len=199)))
+#16
+landWater_bodies <- sort(c(hgRes$summary['landWater bodies','estimate'], seq(-5, 3, len=199)))  
+#17
+night <- sort(c(hgRes$summary['night','estimate'],seq(-0.5,  5, len=199))*1e-03) 
+#18
+evi <- sort(c(hgRes$summary['evi','estimate'],seq(0,  5, len=199)))   
+
+
+Betas <- cbind(intercept, elevation, 
+               landMosaic_cropland, 
+               landMosaic_vegetation,
+               landbroadleaved_deciduous_forest,
+               landneedleleaved_evergreen_forest,
+               landOpen_needleleaved_deciduous_or_evergreen_forest,
+               landmixed_broadleaved_and_needleleaved_forest,
+               landMosaic_forest_or_shrubland,
+               landMosaic_grassland,
+               landshrubland,
+               landherbaceous_vegetation,
+               landSparse_vegetation,
+               landgrassland_or_woody_vegetation,
+               landArtificial_surfaces_and_associated_areas,
+               landWater_bodies, night, evi)
+sdSpatial <- sort(c(seq(0.8, 3, len=59), hgRes$summary['sdSpatial','estimate']))
+```
+
+## Get all estimates in a short-cut way (may take 20-25 minutes)
+```{r allestimates,eval=TRUE}
+result3<-gpuLik::likfitLgmGpu(model=hgRes,
+                              params=paramsUse, 
+                              data = terra::unwrap(dataFromLgmWrap),
+                              paramToEstimate=c('range','combinedRange',
+                                                'sdNugget',
+                                                'shape','nugget', 'aniso1', 
+                                                'aniso2','boxcox'),
+                              boxcox = seq(b[1],b[9],len=31),
+                              Betas = Betas,
+                              sdSpatial = sdSpatial,
+                              cilevel=0.95,  # decimal
+                              type = "double",
+                              NparamPerIter=256,#400,
+                              Nglobal=c(64,64),    
+                              Nlocal=c(16, 8),#c(16,16),
+                              NlocalCache=2000,#2800,
+                              verbose=c(1,0))
+
+rownames(result3$summary) <- substr(rownames(result3$summary), 1, 25) 
+```
+
+```{r}
+result3$summary
+```
+
+```{r}
+result3$reml
+```
+
+
+
+# Or, you can do it step by step, in the following way, showing only the codes here:
+## Get the profile log likelihoods only
+```{r  gpuLik codes, eval=FALSE}
+result1 <- gpuLik::getProfLogL(data=unwrap(dataFromLgmWrap),
+           formula=hgRes$model$formula,
+           coordinates=dataFromLgmWrap@coordinates,
+           params=paramsUse, 
+           boxcox = seq(b[1],b[9],len=31),
+           type = "double",
+           NparamPerIter=256,
+           gpuElementsOnly = FALSE,
+           reml=FALSE, 
+           Nglobal=c(64,64),    
+           Nlocal=c(16, 8),
+           NlocalCache=2000,
+           verbose=c(1,0))
+
+result1$Infindex
+
+result1$predictors
+
+# gpuLik and geostatsp have same optimal value
+max(result1$LogLik)
+
+hgRes$optim$logL
+```
+
+
+## Estimates and plots for correlation params
+```{r correlations, eval=FALSE}
+result2<-gpuLik::prof1dCov(LogLik = result1$LogLik,  # cpu matrix
+         XVYXVX = result1$XVYXVX,  # cpu matrix
+         ssqResidual = result1$ssqResidual,  # cpu matrix
+         paramToEstimate = c('range','combinedRange','shape', 'sdNugget',
+                             'nugget','aniso1', 'aniso2','boxcox'),
+         cilevel=0.95,  # decimal
+         params = result1$paramsRenew, # cpu matrix,
+         boxcox = result1$boxcox, 
+         Ndata = result1$Ndata,
+         Nobs = result1$Nobs,
+         Ncov = result1$Ncov,
+         reml = FALSE,
+         predictors = result1$predictors,  # character string
+         verbose=FALSE)
+
+# table of estimates
+result2$summary
+# index for the MLE parameter set
+result2$mleIndex
+```
+
+## Geostatsp's estmates
+```{r lgm, cache=TRUE}
+rownames(hgRes$summary) <- substr(rownames(hgRes$summary), 1, 25) 
+hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
+```
+
+## Or, get estimates for betas first, manually set the configuration
+```{r betascalar_A, eval=FALSE}
+ConfigBetas<-gpuLik::ParamsFromLgm(hgRes$summary,      #lgm model
+             covariates=result1$predictors)
+
+Betas <- ConfigBetas$Betas 
+```
+
+## Get estimates and profile plots for betas'
+```{r beta_profile, eval=FALSE}
+output<-gpuLik::Prof1dBetas(Betas=Betas, 
+                            cilevel=0.95,
+                            Nobs = result1$Nobs,
+                            Ndata = result1$Ndata,
+                            Nparam = result1$Nparam,
+                            Ncov = result1$Ncov,
+                            detVar = result1$detVar,
+                            detReml = result1$detReml,
+                            ssqY = result1$ssqY,
+                            XVYXVX = result1$XVYXVX,
+                            jacobian = result1$jacobian,
+                            reml=FALSE,
+                            convexHull = FALSE)
+
+output$estimates
+output$breaks
+```
+
+
+## Set sigma manually
+```{r sdSpatial_M, eval=FALSE}
+#sdSpatial <- sort(c(1.478384, seq(0.7, 2.8, len=59))) 
+sdSpatial <- sort(seq(0.7, 2.8, len=59) hgRes$summary['sdSpatial','estimate']))
+```
+
+
+## Or, configure it automatically
+```{r sdSpatial_A, eval=FALSE}
+sdSpatial <- ConfigBetas$sdSpatial
+```
+
+
+## Estimates and profile plots for sdSpatial
+```{r sigma_profile, eval=FALSE}
+sdoutput <- gpuLik::profVariance(sdSpatial, 
+                                 cilevel=0.95,
+                                 Nobs = result1$Nobs, 
+                                 Ndata = result1$Ndata,
+                                 Nparam = result1$Nparam, 
+                                 Ncov = result1$Ncov,
+                                 detVar = result1$detVar, 
+                                 detReml = result1$detReml, 
+                                 ssqResidual = result1$ssqResidual, 
+                                 jacobian = result1$jacobian)
+
+sdoutput$estimates
+breaks <- sdoutput$breaks
+
+temp <- qchisq(0.95,  df = 1)/2
+LogLik <- sdoutput$LogLik
+breaks <- sdoutput$breaks
+
+plot(sdSpatial,LogLik-breaks-temp, cex=0.6, ylab='profileLogL')
+lines(sdSpatial,LogLik-breaks-temp, col='blue')
+abline(h=-temp, lty = 2)
+abline(v=sdoutput$estimates[c(1,2,3)], lty = 2)
+text(sdoutput$estimates[1], -9, round(sdoutput$estimates[1],digits = 3))
+text(sdoutput$estimates[2], -9, round(sdoutput$estimates[2],digits = 3))
+text(sdoutput$estimates[3], -9, round(sdoutput$estimates[3],digits = 3))
+```
+
+
+
+
+
+
+
