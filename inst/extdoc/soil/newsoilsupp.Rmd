@@ -21,18 +21,35 @@ knitr::opts_chunk$set(cache.path = theCache)
 
 ```{r theData, cache=TRUE}
 library('terra')
-load("/hgmTerra.RData")
+dataDir = '~'
+load(file.path(dataDir, "hgmTerra.RData"))
+load(file.path(dataDir, "covListWrap.RData"))
+
 hgm = unwrap(hgmWrap)
 myBgMap = mapmisc::openmap(hgm, zoom=2)
 
-load("/covListWrap.RData")
 covList = lapply(covListWrap, unwrap)
 names(covList) = gsub("Wrap", "", names(covList))
+
 
 
 world1 = crop(vect(rnaturalearth::ne_countries(scale='medium', returnclass='sf')),
               ext(-20, 100, 0, 85))
 worldMap = project(world1, mapmisc::crsLL)
+
+extractEvi = terra::extract(covList$evi, project(hgm, crs(covList$evi)), 
+                            ID=FALSE, method='near')
+bad = is.na(extractEvi)
+hgmBad = project(hgm[bad,], crs(covList$evi))
+
+hgm = hgm[!bad,]
+
+if(FALSE) {
+plot(hgmBad[1:3,])
+plot(covList$evi, add=TRUE)
+plot(project(worldMap, crs(hgmBad)), add=TRUE)
+plot(hgmBad, add=TRUE, col='red')
+}
 ```
 
 ```{r firstPlot, fig.cap='data plot', fig.subcap = c('hg', names(covList)), echo=FALSE, cache=FALSE}
@@ -99,14 +116,10 @@ hgRes$optim$logL
 
 
 ## Configure the params
-<<<<<<< HEAD:inst/extdoc/newsoilsupp.Rmd
+
 ```{r params_config, cache=TRUE, message=FALSE, results='hide'}
 set.seed(66)
-=======
-```{r params_config,  message=FALSE, results='hide'}
 library(gpuLik)
-set.seed(55)
->>>>>>> 8c4ef13ab1591c65c6f381af2bbf93031d622b1b:inst/extdoc/soil/newsoilsupp.Rmd
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 
