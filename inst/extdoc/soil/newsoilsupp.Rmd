@@ -110,6 +110,7 @@ t(as.data.frame(gpuInfo()[c('deviceMemory','localMem')]))
 rownames(hgRes$summary) <- substr(rownames(hgRes$summary), 1, 25) 
 hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
 ```
+
 ```{r}
 hgRes$optim$logL
 ```
@@ -225,6 +226,7 @@ result3$summary
 
 ```{r}
 result3$reml
+max(result3$LogLik)
 ```
 
 
