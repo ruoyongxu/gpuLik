@@ -64,16 +64,16 @@
       BetaSlice <- Betas[,a]
     }
   selectedrows <- (seq_len(Nparam)-1) * Ncov + a
-  XTVinvX_deleted <- matrix(XTVinvX[-selectedrows,-a], ncol=Ucov)
-  XTVinvX_a <- matrix(XTVinvX[-selectedrows, a],  ncol=1)
-  XVY_deleted <- matrix(XVY[-selectedrows, ],ncol=Ndata)
-  X_aVY <- matrix(XVY[selectedrows, ], ncol=Ndata)
-  X_aVX_a <- XTVinvX[selectedrows, a]
+  XTVinvX_deleted <- XTVinvX[-selectedrows,-a,drop=FALSE]
+  XTVinvX_a <-  XTVinvX[-selectedrows, a,drop=FALSE]
+  XVY_deleted <- XVY[-selectedrows, ,drop=FALSE]
+  X_aVY <- XVY[selectedrows, ,drop=FALSE]
+  X_aVX_a <- XTVinvX[selectedrows, a, drop=FALSE]
   
-  partA = matrix(0, nrow=Nparam, ncol=Ndata)
-  partB = matrix(0, nrow=Nparam, ncol=Ndata)
-  partC = matrix(0, nrow=Nparam, ncol=Ndata)
-  partD = matrix(0, nrow=Nparam, ncol=Ndata)
+  partA =  
+  partB = 
+  partC =  
+  partD =  
   partE = matrix(0, nrow=Nparam, ncol=Ndata)
   
   if(Ndata == 1){
@@ -118,7 +118,7 @@
       #print(i)
     }
     }
-  }else{
+  }else{ # Ndata > 1
     for (i in 1:Nparam){
       interval <- c(((i-1)*Ucov+1) : (i*Ucov))
       temp <- solve(XTVinvX_deleted[interval, ]) 

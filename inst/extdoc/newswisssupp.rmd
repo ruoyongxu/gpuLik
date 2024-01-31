@@ -109,6 +109,128 @@ result<-gpuLik::likfitLgmGpu(model =swissRes,
                          NlocalCache=2000,
                          verbose=0)
 ```
+```{r checkProfIntercept}
+stuff = gpuLik::getProfLogL(data=terra::unwrap(swissDataWrap),
+           formula=swissRes$model$formula,
+           coordinates=crds(terra::unwrap(swissDataWrap)),
+           params=paramsUse, 
+           boxcox = seq(b[1],b[9],len=31),
+           type = "double",
+           NparamPerIter=256,
+           gpuElementsOnly = FALSE,
+           reml=FALSE, 
+           Nglobal=c(64,64),    
+           Nlocal=c(16, 8),
+           NlocalCache=2000,
+           verbose=c(1,0))
+max(stuff$LogLik)
+swissRes$opt$logL
+#output<-gpuLik::Prof1dBetas(
+  Betas=Betas
+                            cilevel=0.95
+                            Nobs = stuff$Nobs
+                            Ndata = stuff$Ndata
+                            Nparam = stuff$Nparam
+                            Ncov = stuff$Ncov
+                            detVar = stuff$detVar
+                            detReml = stuff$detReml
+                            ssqY = stuff$ssqY
+                            XVYXVX = stuff$XVYXVX
+                            jacobian = stuff$jacobian
+                            reml=FALSE
+                            convexHull = FALSE
+  m <- nrow(Betas)
+  detVar <- matrix(rep(detVar, Ndata), nrow=Nparam)
+  jacobian <- do.call(rbind, replicate(Nparam, jacobian, simplify = FALSE))
+  #dim(XVYXVX)
+  Ucov <- Ncov-1
+  XTVinvX <- XVYXVX[ , (ncol(XVYXVX)-Ncov+1):ncol(XVYXVX)]
+  XVY <- matrix(XVYXVX[ , 1:Ndata], ncol=Ndata)
+  
+  #dim(XTVinvX)
+  ## make each symmetric
+  for (i in 1:Nparam){
+    XTVinvX[((i-1)*Ncov+1) : (i*Ncov), ] <- gpuLik:::makeSymm(XTVinvX[((i-1)*Ncov+1) : (i*Ncov), ])
+  }
+
+  LogLik_optimized = matrix(0, nrow=m, ncol=ncol(Betas))
+  #breaks <- rep(0, ncol(Betas))
+  Table <- matrix(NA, nrow=ncol(Betas), ncol=4)
+  colnames(Table) <-  c("MLE", paste(c('lower', 'upper'), cilevel*100, 'ci', sep = ''),"maximum")
+  rownames(Table) <- colnames(Betas)
+  #index <- matrix(0, nrow=m, ncol=2)
+  profBetas <- matrix(0, nrow=1001, ncol=2*ncol(Betas))
+  
+a=1
+      BetaSlice <- Betas[,a]
+  selectedrows <- (seq_len(Nparam)-1) * Ncov + a
+  XTVinvX_deleted <- XTVinvX[-selectedrows,-a,drop=FALSE]
+  XTVinvX_a <-  XTVinvX[-selectedrows, a,drop=FALSE]
+  XVY_deleted <- XVY[-selectedrows, ,drop=FALSE]
+  X_aVY <- XVY[selectedrows, ,drop=FALSE]
+  X_aVX_a <- XTVinvX[selectedrows, a, drop=FALSE]
+  
+  partA =  
+  partB = 
+  partC =  
+  partD =  
+  partE = matrix(0, nrow=Nparam, ncol=Ndata)
+  
+  
+   for (i in 1:Nparam){
+      interval <- c(((i-1)*Ucov+1) : (i*Ucov))
+      temp <- solve(XTVinvX_deleted[interval, ]) 
+      if(Ucov==1){
+        #diag(XVY_deleted[interval,] %*% temp  %*% XVY_deleted[interval,])
+        partA[i,] = rowSums(XVY_deleted[interval,] %*% temp * XVY_deleted[interval,])
+        # part (B) have 2 data sets.   has beta
+        partB[i,] = -(XTVinvX_a[interval,]) %*% temp %*% XVY_deleted[interval,]
+        # part (C) no data sets.  has beta
+        partC[i,] = XTVinvX_a[interval, ] %*% temp %*% XTVinvX_a[interval, ]
+        # part (D) have 2 data sets.    has beta
+        partD[i,] = - X_aVY[i, ]
+        # part (E)
+        partE[i,] = X_aVX_a[i]
+      }else{
+        #diag(t(XVY_deleted[interval,]) %*% temp %*% XVY_deleted[interval,])
+        # part (A) have 2 data sets
+        partA[i,] = rowSums(t(XVY_deleted[interval,]) %*% temp * t(XVY_deleted[interval,]))
+        # part (B) have 2 data sets.   has beta
+        partB[i,] = -(XTVinvX_a[interval,]) %*% temp %*% XVY_deleted[interval,]
+        # part (C) no data sets.  has beta
+        partC[i,] = XTVinvX_a[interval, ] %*% temp %*% XTVinvX_a[interval, ]
+        # part (D) have 2 data sets.    has beta
+        partD[i,] = - X_aVY[i, ]
+        # part (E)
+        partE[i,] = X_aVX_a[i]
+      }
+    }
+       
+bet= which(BetaSlice == swissRes$parameters['(Intercept)'])
+
+stuff2 = 2* BetaSlice[bet] *partD + BetaSlice[bet]^2 *partE - (partA + 2*BetaSlice[bet]* partB + BetaSlice[bet]^2 * partC)
+
+      ssqResidual <- ssqY + stuff2
+        
+        loglik_forthisbeta <- (-0.5)*(Nobs*log(ssqResidual/Nobs) + detVar + Nobs + Nobs*log(2*pi) + jacobian)
+
+    max(loglik_forthisbeta)
+    swissRes$opt$logL
+      
+    loglik_forthisbeta[1,which(boxcox==swissRes$parameters['boxcox'])]
+  
+    
+                         
+stuff2 =   2*BetaSlice[bet]*  partD + BetaSlice[bet]^2 * partE - 
+   (partA + 2*BetaSlice[bet] * partB + BetaSlice[bet]^2 * partC)            
+    
+stuff2[1,which(boxcox==swissRes$parameters['boxcox'])]
+stuff$ssqBetahat[1, which(boxcox==swissRes$parameters['boxcox'])]                  
+
+rbind(output$estimates[,1:3],
+as.matrix(swissRes$summary[1:2,c(1,5,6)]))
+```
+
 
 ## Show the results
 ```{r allestimates, cache=FALSE}

@@ -114,7 +114,7 @@ getProfLogL <- function(data,
     varMat,        #21     Vbatch
     cholDiagMat)
 
-  # resid^T V^(-1) resid, resid = Y - X betahat = ssqResidual
+  # resid^T V^(-1) resid, resid = Y - X betahat = ssqResiddual
   ssqResidual <- ssqY - ssqBetahat
   
   # params0[which(is.na(as.vector(detVar))),]
@@ -922,11 +922,23 @@ prof1dCov <- function(LogLik,  # cpu matrix
   NcolTotal = Ndata + Ncov
   
   ###############betahat#####################
-  Betahat <- matrix(0, nrow=Ncov, ncol=Ndata)
-  a<-c( ((index[1]-1)*Ncov+1) : (index[1]*Ncov) )
+#  Betahat <- matrix(0, nrow=Ncov, ncol=Ndata)
+  
+  if(FALSE) {
+    V = geostatsp::matern(data, params[1,], type='inverseCholesky' )
+    VYX = V %*% as.matrix(yx)
+    VY = VYX[,1:length(result1$boxcox)]
+    VX = VYX[,seq(1+ncol(VY), ncol(VYX))]
+    m1 =  crossprod(VX)   
+    m2 = crossprod(VX, VY)
+    m3 = m1 %*% m2
+  }
+  
+  a<-seq( (index[1]-1)*Ncov+1 ,  index[1]*Ncov )
   mat <- XVYXVX[a,((Ndata+1):NcolTotal)]
   mat[upper.tri(mat)] <- mat[lower.tri(mat)]
   Betahat <- solve(mat) %*% XVYXVX[a,index[2]]
+  Betahat <- solve(mat) %*% XVYXVX[a,1:31]
   Table[predictors, 1] <- Betahat
   
   

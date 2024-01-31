@@ -66,13 +66,19 @@ par(oldpar)
 ```
 
 
-
+```{r blas, include=FALSE}
+#mgcv::blas.thread.test(n=1000,nt=RhpcBLASctl::blas_get_num_procs())
+RhpcBLASctl::blas_set_num_threads(1)
+RhpcBLASctl::omp_get_max_threads()
+RhpcBLASctl::blas_get_num_procs()
+```
 
 ## Get the MLEs on CPU
 ```{r build lgm models, cache=TRUE, message=FALSE, results='hide'}
 hgm$land = extract(covList$land, project(hgm, crs(covList$land)))[,2]
 hgm$land = relevel(hgm$land, 'Rainfed croplands')
 library('geostatsp')
+
 hgRes = lgm(formula = HG ~ elevation + land + night + evi, 
             data = hgm,
             grid = 20, covariates = covList, fixBoxcox=FALSE, 
@@ -96,6 +102,7 @@ hgRes4 = lgm(HG ~ elevation + land + night + evi, data = hgm,
              fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
              reml=FALSE, aniso=TRUE)
 ```
+
 
 ```{r gpuStuff}
 library(gpuLik)
@@ -124,8 +131,8 @@ library(gpuLik)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 
-model_list <- list(hgRes, hgRes2, hgRes3, hgRes4)
-A <- gpuLik::configParams(model_list, 
+# model_list <- list(hgRes, hgRes2, hgRes3, hgRes4)
+A <- gpuLik::configParams(list(hgRes, hgRes2), #model_list, 
                           alpha=alpha1,
                           alphasecond = alpha2,
                           data = terra::unwrap(dataFromLgmWrap))
@@ -140,43 +147,45 @@ nrow(paramsUse)
 ```
 
 ##
-```{r  config beta and sigma, cache=TRUE}
+
+```{r  configbetaandsigma, cache=FALSE}
+NforProf = 199
 #1
-intercept<- sort(c(hgRes$summary['(Intercept)','estimate'],seq(-10, -4, len=199)))
+intercept<- sort(c(hgRes$summary['(Intercept)','estimate'], seq(-10, -4, len=NforProf)))
 #2
-elevation  <- sort(c(hgRes$summary['elevation','estimate'], seq(-3,  8, len=199))*1e-04)
+elevation  <- sort(c(hgRes$summary['elevation','estimate'], seq(-3,  8, len=NforProf))*1e-04)
 #3
-landMosaic_cropland <- sort(c(hgRes$summary['landMosaic cropland / veg','estimate'],seq(-0.5,  0.5, len=199)))  
+landMosaic_cropland <- sort(c(hgRes$summary['landMosaic cropland / veg','estimate'],seq(-0.5,  0.5, len=NforProf)))  
 #4
-landMosaic_vegetation <- sort(c(hgRes$summary['landMosaic vegetation / c','estimate'],seq(-1.2,  0.1, len=199))) 
+landMosaic_vegetation <- sort(c(hgRes$summary['landMosaic vegetation / c','estimate'],seq(-1.2,  0.1, len=NforProf))) 
 #5
-landbroadleaved_deciduous_forest <- sort(c(hgRes$summary['landbroadleaved deciduous','estimate'],seq(-0.9,  0.6, len=199)))
+landbroadleaved_deciduous_forest <- sort(c(hgRes$summary['landbroadleaved deciduous','estimate'],seq(-0.9,  0.6, len=NforProf)))
 #6
-landneedleleaved_evergreen_forest <- sort(c(hgRes$summary['landneedleleaved evergree','estimate'], seq(-0.7, 0.9, len=199))) 
+landneedleleaved_evergreen_forest <- sort(c(hgRes$summary['landneedleleaved evergree','estimate'], seq(-0.7, 0.9, len=NforProf))) 
 #7
-landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(hgRes$summary['landOpen needleleaved dec','estimate'],seq(-1.7,  0, len=199)))  
+landOpen_needleleaved_deciduous_or_evergreen_forest <- sort(c(hgRes$summary['landOpen needleleaved dec','estimate'],seq(-1.7,  0, len=NforProf)))  
 #8
-landmixed_broadleaved_and_needleleaved_forest <- sort(c(hgRes$summary['landmixed broadleaved and','estimate'],seq(-10.5e-01, -0.1e-01, len=199))) 
+landmixed_broadleaved_and_needleleaved_forest <- sort(c(hgRes$summary['landmixed broadleaved and','estimate'],seq(-10.5e-01, -0.1e-01, len=NforProf))) 
 #9
-landMosaic_forest_or_shrubland <- sort(c(hgRes$summary['landMosaic forest or shru','estimate'], seq(-0.98, 0.5, len=199))) 
+landMosaic_forest_or_shrubland <- sort(c(hgRes$summary['landMosaic forest or shru','estimate'], seq(-0.98, 0.5, len=NforProf))) 
 #10
-landMosaic_grassland <- sort(c(hgRes$summary['landMosaic grassland / fo','estimate'],seq(-0.7,  0.5, len=199))) 
+landMosaic_grassland <- sort(c(hgRes$summary['landMosaic grassland / fo','estimate'],seq(-0.7,  0.5, len=NforProf))) 
 #11
-landshrubland <- sort(c(hgRes$summary['landshrubland','estimate'], seq(-0.6, 1.1, len=199))) 
+landshrubland <- sort(c(hgRes$summary['landshrubland','estimate'], seq(-0.6, 1.1, len=NforProf))) 
 #12
-landherbaceous_vegetation  <- sort(c(hgRes$summary['landherbaceous vegetation','estimate'],seq(-0.8, 0.7, len=199)))
+landherbaceous_vegetation  <- sort(c(hgRes$summary['landherbaceous vegetation','estimate'],seq(-0.8, 0.7, len=NforProf)))
 #13
-landSparse_vegetation <- sort(c(hgRes$summary['landSparse vegetation','estimate'],seq(-2.5, 0.1, len=199))) 
+landSparse_vegetation <- sort(c(hgRes$summary['landSparse vegetation','estimate'],seq(-2.5, 0.1, len=NforProf))) 
 #14
-landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody ve','estimate'], seq(-2, 0.4, len=199))) 
+landgrassland_or_woody_vegetation <- sort(c(hgRes$summary['landgrassland or woody ve','estimate'], seq(-2, 0.4, len=NforProf))) 
 #15
-landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces a','estimate'], seq(-2.6, 1.6, len=199)))
+landArtificial_surfaces_and_associated_areas  <- sort(c(hgRes$summary['landArtificial surfaces a','estimate'], seq(-2.6, 1.6, len=NforProf)))
 #16
-landWater_bodies <- sort(c(hgRes$summary['landWater bodies','estimate'], seq(-5, 3, len=199)))  
+landWater_bodies <- sort(c(hgRes$summary['landWater bodies','estimate'], seq(-5, 3, len=NforProf)))  
 #17
-night <- sort(c(hgRes$summary['night','estimate'],seq(-0.5,  5, len=199))*1e-03) 
+night <- sort(c(hgRes$summary['night','estimate'],seq(-0.5,  5, len=NforProf))*1e-03) 
 #18
-evi <- sort(c(hgRes$summary['evi','estimate'],seq(0,  5, len=199)))   
+evi <- sort(c(hgRes$summary['evi','estimate'],seq(0,  5, len=NforProf)))   
 
 
 Betas <- cbind(intercept, elevation, 
@@ -196,6 +205,10 @@ Betas <- cbind(intercept, elevation,
                landWater_bodies, night, evi)
 sdSpatial <- sort(c(seq(0.8, 3, len=59), hgRes$summary['sdSpatial','estimate']))
 ```
+
+
+
+
 
 ## Get all estimates in a short-cut way (may take 20-25 minutes)
 ```{r allestimates,eval=TRUE}
@@ -220,8 +233,10 @@ result3<-gpuLik::likfitLgmGpu(model=hgRes,
 rownames(result3$summary) <- substr(rownames(result3$summary), 1, 25) 
 ```
 
+
 ```{r}
-result3$summary
+result3$summary[grep("land", rownames(result3$summary), invert=TRUE),'estimate']
+hgRes$parameters[grep("land", names(hgRes$parameters), invert=TRUE)]
 ```
 
 ```{r}
