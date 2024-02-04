@@ -104,6 +104,20 @@ hgRes4 = lgm(HG ~ elevation + land + night + evi, data = hgm,
 ```
 
 
+## geostatsp's estmates
+```{r mles}
+rownames(hgRes$summary) <- substr(rownames(hgRes$summary), 1, 25) 
+hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
+```
+
+
+
+```{r}
+hgRes$optim$logL
+```
+
+
+
 ```{r gpuStuff}
 library(gpuLik)
 knitr::kable(gpuR::listContexts())
@@ -112,27 +126,19 @@ t(gpuR::listContexts()[gpuR::currentContext(),])
 t(as.data.frame(gpuInfo()[c('deviceMemory','localMem')]))
 ```
 
-## geostatsp's estmates
-```{r mles}
-rownames(hgRes$summary) <- substr(rownames(hgRes$summary), 1, 25) 
-hgRes$summary[,c('estimate','ci0.025', 'ci0.975')]
-```
 
-```{r}
-hgRes$optim$logL
-```
+
 
 
 ## Configure the params
 
 ```{r params_config, cache=TRUE, message=FALSE, results='hide'}
 set.seed(66)
-library(gpuLik)
 alpha1=c(0.00001, 0.01, 0.1, 0.2, 0.25, 0.3, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 alpha2=c(0.00001, 0.01, 0.1, 0.2, 0.5, 0.8, 0.9, 0.95, 0.99, 0.999)
 
 # model_list <- list(hgRes, hgRes2, hgRes3, hgRes4)
-A <- gpuLik::configParams(list(hgRes, hgRes2), #model_list, 
+A <- gpuLik::configParams(list(hgRes, hgRes2,hgRes3,hgRes4), #model_list, 
                           alpha=alpha1,
                           alphasecond = alpha2,
                           data = terra::unwrap(dataFromLgmWrap))

@@ -934,12 +934,12 @@ prof1dCov <- function(LogLik,  # cpu matrix
     m3 = m1 %*% m2
   }
   
-  a<-seq( (index[1]-1)*Ncov+1 ,  index[1]*Ncov )
-  mat <- XVYXVX[a,((Ndata+1):NcolTotal)]
-  mat[upper.tri(mat)] <- mat[lower.tri(mat)]
-  Betahat <- solve(mat) %*% XVYXVX[a,index[2]]
-  Betahat <- solve(mat) %*% XVYXVX[a,1:31]
-  Table[predictors, 1] <- Betahat
+  # a<-seq( (index[1]-1)*Ncov+1 ,  index[1]*Ncov )
+  # mat <- XVYXVX[a,((Ndata+1):NcolTotal)]
+  # mat[upper.tri(mat)] <- mat[lower.tri(mat)]
+  # Betahat <- solve(mat) %*% XVYXVX[a,index[2]]
+  # Betahat <- solve(mat) %*% XVYXVX[a,1:31]
+  # Table[predictors, 1] <- Betahat
   
   
   
