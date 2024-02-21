@@ -109,7 +109,7 @@ result<-gpuLik::likfitLgmGpu(model =swissRes,
                          NlocalCache=2000,
                          verbose=0)
 ```
-```{r checkProfIntercept}
+```{r checkProfIntercept, eval=FALSE}
 stuff = gpuLik::getProfLogL(data=terra::unwrap(swissDataWrap),
            formula=swissRes$model$formula,
            coordinates=crds(terra::unwrap(swissDataWrap)),

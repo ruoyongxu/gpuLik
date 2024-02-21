@@ -365,13 +365,17 @@ configParamsSingle <- function(Model,
   
   
   eigenH = eigen(-HessianMat)
+
   if(any(eigenH$values>100)){
     eigenH$values = pmax(0.1, eigenH$values) 
-  }else{
-    eigenH$values = abs(eigenH$values)
   }
-  #eigenH$values = pmax(0.01, eigenH$values)
-  
+
+  if(!all(eigenH$values > 0)) {
+    # nearest symmetric matix
+    warning("matrix not positive definite, approximating with nearest_spd")
+    eigenH = eigen(pracma::nearest_spd(-HessianMat))
+  }
+
   eig = list(values=1/eigenH$values, vectors=eigenH$vectors)
   
   #eig$vectors %*% diag(eig$values) %*% t(eig$vectors)

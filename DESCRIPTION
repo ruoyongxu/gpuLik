@@ -9,7 +9,7 @@ License: GPL (>= 2)
 Encoding: UTF-8
 NeedsCompilation: yes
 Depends: R (>= 3.5.0), gpuR
-Imports: geostatsp, data.table
+Imports: geostatsp, data.table, pracma
 Suggests: terra, knitr
 LinkingTo:
 	RViennaCL (>= 1.7.1.4),
