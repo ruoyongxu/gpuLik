@@ -230,10 +230,10 @@ result3<-gpuLik::likfitLgmGpu(model=hgRes,
                               sdSpatial = sdSpatial,
                               cilevel=0.95,  # decimal
                               type = "double",
-                              NparamPerIter=256,#400,
-                              Nglobal=c(64,64),    
-                              Nlocal=c(16, 8),#c(16,16),
-                              NlocalCache=2000,#2800,
+                              NparamPerIter=400,#400,
+                              Nglobal=c(256,256),    
+                              Nlocal=c(16, 16),#c(16,16),
+                              NlocalCache=2800,#2800,
                               verbose=c(1,0))
 
 rownames(result3$summary) <- substr(rownames(result3$summary), 1, 25) 
@@ -248,6 +248,7 @@ hgRes$parameters[grep("land", names(hgRes$parameters), invert=TRUE)]
 ```{r}
 result3$reml
 max(result3$LogLik)
+result3$summary
 ```
 
 

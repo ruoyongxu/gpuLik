@@ -63,8 +63,8 @@ swissRes6 =  lgm( formula=rain~ elevation,
                   shape=100, 
                   fixBoxcox=FALSE, fixShape=TRUE, fixNugget = FALSE,  
                   aniso=TRUE )
-swissRes$summary[,c('estimate','ci0.05', 'ci0.95')]
 swissDataWrap = terra::wrap(swissRes$data)
+swissRes$summary[,c('estimate','ci0.05', 'ci0.95')]
 ```
 
 ## Set the representative parameters 
@@ -103,10 +103,10 @@ result<-gpuLik::likfitLgmGpu(model =swissRes,
                          cilevel=0.9,  
                          type = "double",
                          convexHullForBetas = FALSE,
-                         NparamPerIter=256,
-                         Nglobal=c(64,64),
-                         Nlocal=c(8,8),
-                         NlocalCache=2000,
+                         NparamPerIter=400,
+                         Nglobal=c(256,256),
+                         Nlocal=c(16,16),
+                         NlocalCache=2800,
                          verbose=0)
 ```
 ```{r checkProfIntercept, eval=FALSE}
