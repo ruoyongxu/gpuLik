@@ -12,9 +12,8 @@ date()
 
 
 ```{r packages, results='hide', message='hide'}
-   library(gpuR)
-   library(gpuBatchMatrix)
-   library(clrng)
+library(gpuBatchMatrix)
+library(clrng)
 ```
 
 
@@ -152,10 +151,10 @@ print(quantile(as.vector(fromCpu - fromGpu), na.rm=TRUE))
 
 
 # Cholesky
-```{r cholBach, eval = TRUE}
+```{r cholBachGpu, eval = TRUE}
 diagMat = vclMatrix(0, nrow(paramsGpu), ncol(outputBatchF), 
                     type = gpuR::typeof(outputBatchF))
-outputChol = deepcopy(outputBatchF)
+outputChol = gpuR::deepcopy(outputBatchF)
 
 gpuBatchMatrix::cholBatch(
   outputChol, diagMat, 
@@ -171,11 +170,13 @@ as.matrix(diagMat)[,1:4]
 ```{r cholBatchCpu, eval=TRUE}
 D=2
 theMaternGpu = as.matrix(outputBatchF[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
+dim(theMaternGpu)
 fromGpuOrig = chol4gpu = as.matrix(outputChol[seq(1+(D-1)*nrow(coordsGpu), len=nrow(coordsGpu)),])
 chol4gpu[upper.tri(chol4gpu)] = 0
 diag(chol4gpu) = 1
-diagGpu = as.vector(pmax(0,diagMat[D,]))
-
+#diagGpu = as.vector(pmax(0,diagMat[D,]))
+diagGpu = as.vector(diagMat[D,])
+length(diagGpu)
 maternReconstruct = chol4gpu %*% diag(diagGpu) %*% t(chol4gpu)
 
 maternCpu = geostatsp::matern(
@@ -185,7 +186,6 @@ Sprob = c(0,0.01, 0.1, 0.5)
 Sprob = sort(unique(c(Sprob, 1-Sprob)))
 
 quantile(maternReconstruct - maternCpu, prob=Sprob)
-    
 
 cholCpu = geostatsp::matern(
     x=coordsSp,
@@ -211,9 +211,9 @@ plot(theDiag - diagGpu)
 # Multiplying lower triangle
 create a matrix of independent normals
 ```{r randomNormalsSim}
-streamsGpu <- clrng::createStreamsGpu(128*64)
+streamsGpu <- clrng::createStreamsGpu(128*128)
 zMatGpu = clrng::rnormGpu(c(ncol(outputBatchF), Nsim), 
-                           streams=streamsGpu, Nglobal=c(128,64),
+                           streams=streamsGpu, Nglobal=c(128,128),
                            type = theType)
 ```
 
@@ -244,8 +244,6 @@ diag(chol4gpu) = 1
 diagGpu = as.vector(diagMat[D,])
 zCpu = as.matrix(zMatGpu)
 resCpu = chol4gpu %*% diag( sqrt(diagGpu)) %*% zCpu
-
-
 
 
 quantile(resGpu - resCpu)

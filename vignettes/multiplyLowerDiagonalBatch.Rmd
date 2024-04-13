@@ -73,7 +73,7 @@ Lg <- vclMatrix(rbind(L,L), type=type)
 diagg <- vclMatrix(rbind(diag(diagmat),diag(diagmat)), nrow=2, ncol=5, type=type)
 zmatg <- vclMatrix(rbind(zmat,zmat), type = type)
 
-gpuBatchMatrix:::multiplyLowerDiagonalBatchBackend(Lg, diagg, zmatg, output, diagIsOne = 1, 
+gpuLik:::multiplyLowerDiagonalBatchBackend(Lg, diagg, zmatg, output, diagIsOne = 1, 
                                            transformD = "sqrt", Nglobal = c(4,4,1),Nlocal = c(2,2,1),NlocalCache = 50)
 
 

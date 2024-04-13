@@ -3,7 +3,7 @@ Version: 0.2
 Date: 2023-12-07
 Title: Likelihood calculations on GPU
 Author: Patrick Brown, Ruoyong Xu
-Description: GPU processing of Gaussian spatial models
+Description: leverages GPUs for parallel computation of profile likelihoods, specifically designed for Gaussian spatial models.
 Maintainer: Ruoyong Xu <ruoyong.xu@mail.utoronto.ca>
 License: GPL (>= 2)
 Encoding: UTF-8
